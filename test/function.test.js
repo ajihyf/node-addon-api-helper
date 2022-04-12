@@ -38,11 +38,35 @@ describe('function', () => {
   });
 
   [
+    ['boolCallback', true, false],
+    ['doubleCallback', 232.42, 233.42],
+    ['floatCallback', 232, 233],
+    ['uint8Callback', 12, 13],
+    ['uint16Callback', 12, 13],
+    ['uint32Callback', 12, 13],
+    ['int8Callback', 12, 13],
+    ['int16Callback', 12, 13],
+    ['int32Callback', 12, 13],
+    [
+      'int64Callback',
+      BigInt(Number.MAX_SAFE_INTEGER),
+      BigInt(Number.MAX_SAFE_INTEGER) + 42n,
+    ],
+    [
+      'uint64Callback',
+      BigInt(Number.MAX_SAFE_INTEGER),
+      BigInt(Number.MAX_SAFE_INTEGER) + 233n,
+    ],
+    ['strCallback', 'hello', 'hello!!'],
+    ['u16strCallback', 'hello', 'hello??'],
+
     [true, 'vectorCallback', [1, 2, 3], [2, 3, 4]],
     [true, 'tupleCallback', ['233'], [3, '42'], ['42', 233], [2, '233']],
+    ['functionWithVariants', '42', 2, 233, '233'],
+    ['voidCallback', 1, undefined],
 
     ['valueCallback', { a: 3 }, '[object Object]'],
-    ['boolCallback', true, false],
+    ['booleanCallback', true, false],
     ['numberCallback', 1, 2],
     [
       'bigIntCallback',
@@ -123,8 +147,6 @@ describe('function', () => {
       new BigUint64Array([42n, 2n, 3n]),
     ],
 
-    ['functionWithVariants', '42', 2, 233, '233'],
-    ['voidCallback', 1, undefined],
     ['lambda', 1, 1 + 42],
     ['lambdaWithVoid', 1, undefined],
     ['lambdaWithCapture', 1, 1 + 233],

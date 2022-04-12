@@ -2,6 +2,7 @@
 #define SRC_NAPI_HELPER_INL_H_
 
 #include <optional>
+#include <string>
 #include <tuple>
 #include <variant>
 
@@ -234,7 +235,7 @@ template <> struct ValueTransformer<int64_t> {
     if (!value.IsBigInt()) {
       return {};
     }
-    bool lossless = false;
+    bool lossless = true;
     return value.As<Napi::BigInt>().Int64Value(&lossless);
   }
 
@@ -248,7 +249,7 @@ template <> struct ValueTransformer<uint64_t> {
     if (!value.IsBigInt()) {
       return {};
     }
-    bool lossless = false;
+    bool lossless = true;
     return value.As<Napi::BigInt>().Uint64Value(&lossless);
   }
 

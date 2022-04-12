@@ -14,7 +14,7 @@ uint32_t ValueCallbackWithInfo(const Napi::CallbackInfo &info, int32_t num1) {
 
 Napi::Value ValueCallback(Napi::Value value) { return value.ToString(); }
 
-Napi::Boolean BoolCallback(Napi::Boolean value) {
+Napi::Boolean BooleanCallback(Napi::Boolean value) {
   return Napi::Boolean::New(value.Env(), !value.Value());
 }
 
@@ -119,6 +119,32 @@ Napi::BigUint64Array BigUint64ArrayCallback(Napi::BigUint64Array arr) {
   return arr;
 }
 
+bool BoolCallback(bool b) { return !b; }
+
+double DoubleCallback(double num) { return num + 1; }
+
+float FloatCallback(float num) { return num + 1; }
+
+uint8_t Uint8Callback(uint8_t num) { return num + 1; }
+
+uint16_t Uint16Callback(uint16_t num) { return num + 1; }
+
+uint32_t Uint32Callback(uint32_t num) { return num + 1; }
+
+int8_t Int8Callback(int8_t num) { return num + 1; }
+
+int16_t Int16Callback(int16_t num) { return num + 1; }
+
+int32_t Int32Callback(int32_t num) { return num + 1; }
+
+int64_t Int64Callback(int64_t num) { return num + 42; }
+
+uint64_t Uint64Callback(uint64_t num) { return num + 233; }
+
+std::string StrCallback(std::string str) { return str + "!!"; }
+
+std::u16string U16StrCallback(std::u16string str) { return str + u"??"; }
+
 std::vector<uint32_t> VectorCallback(std::vector<uint32_t> arr) {
   for (auto &num : arr) {
     num++;
@@ -130,6 +156,20 @@ std::tuple<uint32_t, std::string>
 TupleCallback(std::tuple<std::string, std::optional<uint32_t>> input) {
   return std::make_tuple(std::get<0>(input).size(),
                          std::to_string(std::get<1>(input).value_or(42)));
+}
+
+std::variant<uint32_t, std::string>
+FunctionWithVariants(std::variant<uint32_t, std::string> input) {
+  struct Visitor {
+    std::variant<uint32_t, std::string> operator()(std::string &str) {
+      return str.size();
+    }
+    std::variant<uint32_t, std::string> operator()(uint32_t &num) {
+      return std::to_string(num);
+    }
+  };
+
+  return std::visit(Visitor(), input);
 }
 
 std::string FunctionThrows(uint32_t i) {
@@ -148,20 +188,6 @@ FunctionThrowsManually(const Napi::CallbackInfo &info, uint32_t i) {
   }
   return std::to_string(i);
 }
-
-std::variant<uint32_t, std::string>
-FunctionWithVariants(std::variant<uint32_t, std::string> input) {
-  struct Visitor {
-    std::variant<uint32_t, std::string> operator()(std::string &str) {
-      return str.size();
-    }
-    std::variant<uint32_t, std::string> operator()(uint32_t &num) {
-      return std::to_string(num);
-    }
-  };
-
-  return std::visit(Visitor(), input);
-}
 } // namespace
 
 Napi::Object InitFunction(Napi::Env env) {
@@ -175,11 +201,8 @@ Napi::Object InitFunction(Napi::Env env) {
   obj["customBadArgumentsCallback"] = NapiHelper::Function::New(
       env, ArgsCallback, nullptr, nullptr, err_message);
 
-  obj["vectorCallback"] = NapiHelper::Function::New<VectorCallback>(env);
-  obj["tupleCallback"] = NapiHelper::Function::New<TupleCallback>(env);
-
   obj["valueCallback"] = NapiHelper::Function::New<ValueCallback>(env);
-  obj["boolCallback"] = NapiHelper::Function::New<BoolCallback>(env);
+  obj["booleanCallback"] = NapiHelper::Function::New<BooleanCallback>(env);
   obj["numberCallback"] = NapiHelper::Function::New<NumberCallback>(env);
   obj["bigIntCallback"] = NapiHelper::Function::New<BigIntCallback>(env);
   obj["dateCallback"] = NapiHelper::Function::New<DateCallback>(env);
@@ -220,8 +243,25 @@ Napi::Object InitFunction(Napi::Env env) {
   obj["bigUint64ArrayCallback"] =
       NapiHelper::Function::New<BigUint64ArrayCallback>(env);
 
+  obj["boolCallback"] = NapiHelper::Function::New<BoolCallback>(env);
+  obj["doubleCallback"] = NapiHelper::Function::New<DoubleCallback>(env);
+  obj["floatCallback"] = NapiHelper::Function::New<FloatCallback>(env);
+  obj["uint8Callback"] = NapiHelper::Function::New<Uint8Callback>(env);
+  obj["uint16Callback"] = NapiHelper::Function::New<Uint16Callback>(env);
+  obj["uint32Callback"] = NapiHelper::Function::New<Uint32Callback>(env);
+  obj["int8Callback"] = NapiHelper::Function::New<Int8Callback>(env);
+  obj["int16Callback"] = NapiHelper::Function::New<Int16Callback>(env);
+  obj["int32Callback"] = NapiHelper::Function::New<Int32Callback>(env);
+  obj["int64Callback"] = NapiHelper::Function::New<Int64Callback>(env);
+  obj["uint64Callback"] = NapiHelper::Function::New<Uint64Callback>(env);
+  obj["strCallback"] = NapiHelper::Function::New<StrCallback>(env);
+  obj["u16strCallback"] = NapiHelper::Function::New<U16StrCallback>(env);
+
+  obj["vectorCallback"] = NapiHelper::Function::New<VectorCallback>(env);
+  obj["tupleCallback"] = NapiHelper::Function::New<TupleCallback>(env);
   obj["functionWithVariants"] =
       NapiHelper::Function::New<FunctionWithVariants>(env);
+
   obj["voidCallback"] = NapiHelper::Function::New<VoidCallback>(env);
 
   obj["valueCallbackWithInfo"] =
