@@ -1,5 +1,5 @@
-const path = require('path');
+const path = require('path')
 
 module.exports = {
-  include_dir: path.relative('.', __dirname),
-};
+  include_dir: path.relative('.', __dirname)
+}

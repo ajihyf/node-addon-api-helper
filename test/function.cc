@@ -152,14 +152,14 @@ std::vector<uint32_t> VectorCallback(std::vector<uint32_t> arr) {
   return arr;
 }
 
-std::tuple<uint32_t, std::string>
-TupleCallback(std::tuple<std::string, std::optional<uint32_t>> input) {
+std::tuple<uint32_t, std::string> TupleCallback(
+    std::tuple<std::string, std::optional<uint32_t>> input) {
   return std::make_tuple(std::get<0>(input).size(),
                          std::to_string(std::get<1>(input).value_or(42)));
 }
 
-std::variant<uint32_t, std::string>
-FunctionWithVariants(std::variant<uint32_t, std::string> input) {
+std::variant<uint32_t, std::string> FunctionWithVariants(
+    std::variant<uint32_t, std::string> input) {
   struct Visitor {
     std::variant<uint32_t, std::string> operator()(std::string &str) {
       return str.size();
@@ -179,8 +179,8 @@ std::string FunctionThrows(uint32_t i) {
   return std::to_string(i);
 }
 
-std::optional<std::string>
-FunctionThrowsManually(const Napi::CallbackInfo &info, uint32_t i) {
+std::optional<std::string> FunctionThrowsManually(
+    const Napi::CallbackInfo &info, uint32_t i) {
   if (i > 233) {
     Napi::RangeError::New(info.Env(), "bigger than 233")
         .ThrowAsJavaScriptException();
@@ -188,7 +188,7 @@ FunctionThrowsManually(const Napi::CallbackInfo &info, uint32_t i) {
   }
   return std::to_string(i);
 }
-} // namespace
+}  // namespace
 
 Napi::Object InitFunction(Napi::Env env) {
   Napi::Object obj = Napi::Object::New(env);

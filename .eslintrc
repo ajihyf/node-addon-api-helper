@@ -1,0 +1,7 @@
+{
+  "root": true,
+  "parserOptions": {
+    "sourceType": "script"
+  },
+  "extends": ["standard"]
+}

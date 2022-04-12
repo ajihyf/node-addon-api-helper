@@ -1,9 +1,9 @@
 {
   'conditions': [
     ['OS=="mac"', {
-      'cflags+': ['-fvisibility=hidden'],
+      'cflags+': [ '-fvisibility=hidden' ],
       'xcode_settings': {
-        'OTHER_CFLAGS': ['-fvisibility=hidden']
+        'OTHER_CFLAGS': [ '-fvisibility=hidden' ]
       }
     }]
   ],

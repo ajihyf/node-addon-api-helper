@@ -10,16 +10,22 @@
     "predev": "node-gyp rebuild -C test --debug",
     "dev": "npm run ut",
     "predev:incremental": "node-gyp configure build -C test --debug",
-    "dev:incremental": "npm run ut"
+    "dev:incremental": "npm run ut",
+    "lint": "node node_modules/node-addon-api/tools/eslint-format && node node_modules/node-addon-api/tools/clang-format",
+    "lint:fix": "node node_modules/node-addon-api/tools/clang-format --fix && node node_modules/node-addon-api/tools/eslint-format --fix",
+    "prepare": "husky install"
   },
   "author": "ajihyf",
   "license": "ISC",
   "devDependencies": {
+    "bindings": "^1.5.0",
     "chai": "^4.3.6",
     "clang-format": "^1.6.0",
+    "eslint": "^7.32.0",
+    "eslint-config-standard": "^16.0.3",
     "mocha": "^9.2.2",
     "node-gyp": "^9.0.0",
-    "bindings": "^1.5.0"
+    "husky": "^7.0.0"
   },
   "dependencies": {
     "node-addon-api": "^4.0.0"
