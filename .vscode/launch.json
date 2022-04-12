@@ -1,0 +1,40 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug CPP",
+      "program": "node",
+      "args": [
+        "--inspect-brk",
+        "node_modules/mocha/bin/mocha",
+        "'test/*.test.js'",
+        "--timeout",
+        "0"
+      ],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "Attach Node",
+      "port": 9229,
+      "request": "attach",
+      "skipFiles": ["<node_internals>/**"],
+      "type": "pwa-node"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Debug CPP & Node",
+      "configurations": ["Debug CPP", "Attach Node"],
+      "presentation": {
+        "hidden": false,
+        "group": "Compounds",
+        "order": 1
+      }
+    }
+  ]
+}
