@@ -3,7 +3,16 @@
     ['OS=="mac"', {
       'cflags+': [ '-fvisibility=hidden' ],
       'xcode_settings': {
-        'OTHER_CFLAGS': [ '-fvisibility=hidden' ]
+        'CLANG_CXX_LIBRARY': 'libc++',
+        'MACOSX_DEPLOYMENT_TARGET': '10.13',
+        'OTHER_CFLAGS': [ '-fvisibility=hidden', '-std=c++17' ]
+      }
+    }],
+    ['OS=="win"', {
+      'msbuild_settings': {
+        'ClCompile': {
+          'LanguageStandard': 'stdcpp17'
+        }
       }
     }]
   ],

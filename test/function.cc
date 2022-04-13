@@ -171,7 +171,7 @@ std::variant<uint32_t, std::string> FunctionWithVariants(
     std::variant<uint32_t, std::string> input) {
   struct Visitor {
     std::variant<uint32_t, std::string> operator()(std::string &str) {
-      return str.size();
+      return static_cast<uint32_t>(str.size());
     }
     std::variant<uint32_t, std::string> operator()(uint32_t &num) {
       return std::to_string(num);

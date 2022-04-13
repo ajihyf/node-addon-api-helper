@@ -3,7 +3,7 @@ const { scriptWrappable } = require('bindings')('binding.node')
 
 describe('ObjectWrap', () => {
   it('construct object', () => {
-    expect(new scriptWrappable.TestObject(233)).to.be.an('object')
+    expect(new scriptWrappable.TestObject(233)).to.be.an.instanceOf(scriptWrappable.TestObject)
 
     expect(() => new scriptWrappable.TestObject('233')).to.throw(TypeError, 'bad arguments')
   })
