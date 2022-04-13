@@ -3,7 +3,7 @@
     {
       'target_name': 'binding',
       'includes': ['../common.gypi', '../except.gypi'],
-      'sources': ['function.cc', 'binding.cc']
+      'sources': ['object_wrap.cc', 'function.cc', 'binding.cc']
     },
   ]
 }

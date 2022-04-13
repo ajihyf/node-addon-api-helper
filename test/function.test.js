@@ -17,16 +17,6 @@ describe('function', () => {
     )
   })
 
-  it('supports customize bad arguments message', () => {
-    expect(() =>
-      bindings.function.customBadArgumentsCallbackTpl('str')
-    ).to.throw(TypeError, 'you bad bad')
-    expect(() => bindings.function.customBadArgumentsCallback('str')).to.throw(
-      TypeError,
-      'you bad bad'
-    )
-  })
-
   it('accept optional argument', () => {
     expect(bindings.function.argsCallback(1, 'hehe', 'str', false)).to.equal(
       1 + 42 + 3
@@ -61,10 +51,12 @@ describe('function', () => {
     ['u16strCallback', 'hello', 'hello??'],
 
     [true, 'vectorCallback', [1, 2, 3], [2, 3, 4]],
-    [true, 'tupleCallback', ['233'], [3, '42'], ['42', 233], [2, '233']],
+    [true, 'tupleCallback', ['233'], [3, undefined], ['42', 233], [2, '233']],
     ['functionWithVariants', '42', 2, 233, '233'],
     ['voidCallback', 1, undefined],
 
+    ['undefinedCallback', undefined, undefined],
+    ['nullCallback', null, null],
     ['valueCallback', { a: 3 }, '[object Object]'],
     ['booleanCallback', true, false],
     ['numberCallback', 1, 2],

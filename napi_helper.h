@@ -5,6 +5,9 @@
 
 namespace NapiHelper {
 
+struct Undefined {};
+struct Null {};
+
 class Error :
 #ifdef NAPI_CPP_EXCEPTIONS
     public std::exception
@@ -35,15 +38,105 @@ class TypeError : public Error {
 
 class Function {
  public:
-  template <auto fn, const char *bad_arguments_message = nullptr>
+  template <auto fn>
   static Napi::Function New(Napi::Env env, const char *utf8name = nullptr,
+                            void *data = nullptr);
+
+  template <auto fn>
+  static Napi::Function New(Napi::Env env, const std::string &utf8name,
                             void *data = nullptr);
 
   template <typename Callable>
   static Napi::Function New(Napi::Env env, Callable fn,
                             const char *utf8name = nullptr,
-                            void *data = nullptr,
-                            const char *bad_arguments_message = nullptr);
+                            void *data = nullptr);
+
+  template <typename Callable>
+  static Napi::Function New(Napi::Env env, Callable fn,
+                            const std::string &utf8name, void *data = nullptr);
+};
+
+template <typename T>
+class ObjectWrap : public Napi::ObjectWrap<ObjectWrap<T>> {
+ private:
+  using This = ObjectWrap<T>;
+
+  std::unique_ptr<T> _wrapped;
+
+  template <auto T::*fn>
+  auto InstanceMethodCallback(const Napi::CallbackInfo &);
+
+  template <auto T::*fn>
+  void InstanceSetterCallback(const Napi::CallbackInfo &, const Napi::Value &);
+
+  template <auto fn>
+  static auto StaticMethodCallback(const Napi::CallbackInfo &);
+
+  template <auto fn>
+  static void StaticSetterCallback(const Napi::CallbackInfo &,
+                                   const Napi::Value &);
+
+ public:
+  ObjectWrap(const Napi::CallbackInfo &info);
+
+  T &wrapped() const;
+
+  using PropertyDescriptor =
+      typename Napi::ObjectWrap<This>::PropertyDescriptor;
+
+  template <typename... CtorArgs>
+  static Napi::Function DefineClass(
+      Napi::Env env, const char *utf8name,
+      const std::initializer_list<PropertyDescriptor> &properties);
+
+  template <typename... CtorArgs>
+  static Napi::Function DefineClass(
+      Napi::Env env, const char *utf8name,
+      const std::vector<PropertyDescriptor> &properties);
+
+  template <auto T::*fn>
+  static PropertyDescriptor InstanceMethod(
+      const char *name, napi_property_attributes attributes = napi_default,
+      void *data = nullptr);
+
+  template <auto T::*fn>
+  static PropertyDescriptor InstanceMethod(
+      Napi::Symbol name, napi_property_attributes attributes = napi_default,
+      void *data = nullptr);
+
+  template <auto T::*getter, auto T::*setter = nullptr>
+  static PropertyDescriptor InstanceAccessor(
+      const char *utf8name, napi_property_attributes attributes = napi_default,
+      void *data = nullptr);
+
+  template <auto T::*getter, auto T::*setter = nullptr>
+  static PropertyDescriptor InstanceAccessor(
+      Napi::Symbol name, napi_property_attributes attributes = napi_default,
+      void *data = nullptr);
+
+  template <auto fn>
+  static PropertyDescriptor StaticMethod(
+      const char *name, napi_property_attributes attributes = napi_default,
+      void *data = nullptr);
+
+  template <auto fn>
+  static PropertyDescriptor StaticMethod(
+      Napi::Symbol name, napi_property_attributes attributes = napi_default,
+      void *data = nullptr);
+
+  template <auto getter, auto setter = nullptr>
+  static PropertyDescriptor StaticAccessor(
+      const char *utf8name, napi_property_attributes attributes = napi_default,
+      void *data = nullptr);
+
+  template <auto getter, auto setter = nullptr>
+  static PropertyDescriptor StaticAccessor(
+      Napi::Symbol name, napi_property_attributes attributes = napi_default,
+      void *data = nullptr);
+
+#if NAPI_VERSION >= 8
+  static const napi_type_tag *type_tag();
+#endif
 };
 
 }  // namespace NapiHelper

@@ -12,6 +12,12 @@ uint32_t ValueCallbackWithInfo(const Napi::CallbackInfo &info, int32_t num1) {
   return num1 + info.Length();
 }
 
+NapiHelper::Undefined UndefinedCallback(NapiHelper::Undefined) {
+  return NapiHelper::Undefined{};
+}
+
+NapiHelper::Null NullCallback(NapiHelper::Null) { return NapiHelper::Null{}; }
+
 Napi::Value ValueCallback(Napi::Value value) { return value.ToString(); }
 
 Napi::Boolean BooleanCallback(Napi::Boolean value) {
@@ -152,10 +158,13 @@ std::vector<uint32_t> VectorCallback(std::vector<uint32_t> arr) {
   return arr;
 }
 
-std::tuple<uint32_t, std::string> TupleCallback(
+std::tuple<uint32_t, std::optional<std::string>> TupleCallback(
     std::tuple<std::string, std::optional<uint32_t>> input) {
-  return std::make_tuple(std::get<0>(input).size(),
-                         std::to_string(std::get<1>(input).value_or(42)));
+  std::optional<std::string> ret1;
+  if (auto &arg1 = std::get<1>(input)) {
+    ret1.emplace(std::to_string(*arg1));
+  }
+  return std::make_tuple(std::get<0>(input).size(), std::move(ret1));
 }
 
 std::variant<uint32_t, std::string> FunctionWithVariants(
@@ -194,13 +203,14 @@ Napi::Object InitFunction(Napi::Env env) {
   Napi::Object obj = Napi::Object::New(env);
 
   obj["argsCallback"] = NapiHelper::Function::New<ArgsCallback>(env);
-  static const char err_message[] = "you bad bad";
 
   obj["customBadArgumentsCallbackTpl"] =
-      NapiHelper::Function::New<ArgsCallback, err_message>(env);
-  obj["customBadArgumentsCallback"] = NapiHelper::Function::New(
-      env, ArgsCallback, nullptr, nullptr, err_message);
+      NapiHelper::Function::New<ArgsCallback>(env);
+  obj["customBadArgumentsCallback"] =
+      NapiHelper::Function::New(env, ArgsCallback, nullptr, nullptr);
 
+  obj["undefinedCallback"] = NapiHelper::Function::New<UndefinedCallback>(env);
+  obj["nullCallback"] = NapiHelper::Function::New<NullCallback>(env);
   obj["valueCallback"] = NapiHelper::Function::New<ValueCallback>(env);
   obj["booleanCallback"] = NapiHelper::Function::New<BooleanCallback>(env);
   obj["numberCallback"] = NapiHelper::Function::New<NumberCallback>(env);
