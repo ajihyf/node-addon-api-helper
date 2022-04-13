@@ -1,6 +1,6 @@
 {
-  "name": "napi-helper",
-  "version": "1.0.0",
+  "name": "node-addon-api-helper",
+  "version": "0.0.1",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -31,8 +31,7 @@
     "node-addon-api": "^4.0.0"
   },
   "files": [
-    "*.{c,h,gyp,gypi}",
-    "tools/"
+    "*.{c,h,gyp,gypi}"
   ],
   "gypfile": false
 }
