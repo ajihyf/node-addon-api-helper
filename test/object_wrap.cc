@@ -31,6 +31,7 @@ class TestObject {
         env, "TestObject",
         {Wrapped::StaticValue("sym", sym),
          Wrapped::StaticMethod<TestObject::AddStatic>("add"),
+         Wrapped::StaticAccessor<TestObject::count>("readonlyCount"),
          Wrapped::StaticAccessor<TestObject::count, TestObject::set_count>(
              "count"),
 
@@ -39,6 +40,7 @@ class TestObject {
          Wrapped::InstanceMethod<&TestObject::Multiply>("multiply"),
          Wrapped::InstanceMethod<&TestObject::Add>("add"),
          Wrapped::InstanceMethod<&TestObject::GetArgLength>("getArgLength"),
+         Wrapped::InstanceAccessor<&TestObject::num>("readonlyNum"),
          Wrapped::InstanceAccessor<&TestObject::num, &TestObject::set_num>(
              "num")});
   }

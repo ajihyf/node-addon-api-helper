@@ -3,6 +3,13 @@
 
 #include <napi.h>
 
+#if !defined(NAPI_HELPER_TAG_OBJECT_WRAP) && \
+    !defined(NAPI_HELPER_DISABLE_TAG_OBJECT_WRAP)
+#if NAPI_VERSION >= 8
+#define NAPI_HELPER_TAG_OBJECT_WRAP
+#endif
+#endif
+
 namespace NapiHelper {
 
 struct Undefined {};
@@ -104,12 +111,22 @@ class ObjectWrap : public Napi::ObjectWrap<ObjectWrap<T>> {
       Napi::Symbol name, napi_property_attributes attributes = napi_default,
       void *data = nullptr);
 
-  template <auto T::*getter, auto T::*setter = nullptr>
+  template <auto T::*getter>
   static PropertyDescriptor InstanceAccessor(
       const char *utf8name, napi_property_attributes attributes = napi_default,
       void *data = nullptr);
 
-  template <auto T::*getter, auto T::*setter = nullptr>
+  template <auto T::*getter, auto T::*setter>
+  static PropertyDescriptor InstanceAccessor(
+      const char *utf8name, napi_property_attributes attributes = napi_default,
+      void *data = nullptr);
+
+  template <auto T::*getter>
+  static PropertyDescriptor InstanceAccessor(
+      Napi::Symbol name, napi_property_attributes attributes = napi_default,
+      void *data = nullptr);
+
+  template <auto T::*getter, auto T::*setter>
   static PropertyDescriptor InstanceAccessor(
       Napi::Symbol name, napi_property_attributes attributes = napi_default,
       void *data = nullptr);
@@ -124,9 +141,19 @@ class ObjectWrap : public Napi::ObjectWrap<ObjectWrap<T>> {
       Napi::Symbol name, napi_property_attributes attributes = napi_default,
       void *data = nullptr);
 
-  template <auto getter, auto setter = nullptr>
+  template <auto getter>
   static PropertyDescriptor StaticAccessor(
       const char *utf8name, napi_property_attributes attributes = napi_default,
+      void *data = nullptr);
+
+  template <auto getter, auto setter>
+  static PropertyDescriptor StaticAccessor(
+      const char *utf8name, napi_property_attributes attributes = napi_default,
+      void *data = nullptr);
+
+  template <auto getter>
+  static PropertyDescriptor StaticAccessor(
+      Napi::Symbol name, napi_property_attributes attributes = napi_default,
       void *data = nullptr);
 
   template <auto getter, auto setter = nullptr>
@@ -134,7 +161,7 @@ class ObjectWrap : public Napi::ObjectWrap<ObjectWrap<T>> {
       Napi::Symbol name, napi_property_attributes attributes = napi_default,
       void *data = nullptr);
 
-#if NAPI_VERSION >= 8
+#ifdef NAPI_HELPER_TAG_OBJECT_WRAP
   static const napi_type_tag *type_tag();
 #endif
 };

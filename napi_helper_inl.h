@@ -392,7 +392,7 @@ struct ValueTransformer<std::vector<T>> {
   }
 };
 
-#if NAPI_VERSION >= 8
+#ifdef NAPI_HELPER_TAG_OBJECT_WRAP
 
 template <typename T>
 struct ValueTransformer<ObjectWrap<T> *> {
@@ -577,7 +577,8 @@ class Invoker {
 
     std::optional<Args> args = ArgsConverter<Args>::Get(info, 0);
     if (!args.has_value()) {
-      NAPI_THROW(Napi::TypeError::New(info.Env(), "bad arguments"), Ret());
+      NAPI_THROW(Napi::TypeError::New(info.Env(), "bad arguments"),
+                 typename Signature::ret());
     }
 
     if constexpr (head_is_cb_info) {
@@ -693,7 +694,7 @@ inline Napi::Function Function::New(Napi::Env env, Callable fn,
 template <typename T>
 inline ObjectWrap<T>::ObjectWrap(const Napi::CallbackInfo &info)
     : Napi::ObjectWrap<This>(info) {
-#if NAPI_VERSION >= 8
+#ifdef NAPI_HELPER_TAG_OBJECT_WRAP
   napi_type_tag_object(info.Env(), info.This(), type_tag());
 #endif
   auto t_ctor = reinterpret_cast<details::Invoker::ConstructFn<T>>(info.Data());
@@ -758,19 +759,24 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::InstanceMethod(
 }
 
 template <typename T>
+template <auto T::*getter>
+inline typename ObjectWrap<T>::PropertyDescriptor
+ObjectWrap<T>::InstanceAccessor(const char *name,
+                                napi_property_attributes attributes,
+                                void *data) {
+  return Napi::ObjectWrap<This>::template InstanceAccessor<
+      &This::InstanceMethodCallback<getter>>(name, attributes, data);
+}
+
+template <typename T>
 template <auto T::*getter, auto T::*setter>
 inline typename ObjectWrap<T>::PropertyDescriptor
 ObjectWrap<T>::InstanceAccessor(const char *name,
                                 napi_property_attributes attributes,
                                 void *data) {
-  if constexpr (setter == nullptr) {
-    return Napi::ObjectWrap<This>::template InstanceAccessor<
-        &This::InstanceMethodCallback<getter>>(name, attributes, data);
-  } else {
-    return Napi::ObjectWrap<This>::template InstanceAccessor<
-        &This::InstanceMethodCallback<getter>,
-        &This::InstanceSetterCallback<setter>>(name, attributes, data);
-  }
+  return Napi::ObjectWrap<This>::template InstanceAccessor<
+      &This::InstanceMethodCallback<getter>,
+      &This::InstanceSetterCallback<setter>>(name, attributes, data);
 }
 
 template <typename T>
@@ -782,19 +788,24 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::InstanceMethod(
 }
 
 template <typename T>
+template <auto T::*getter>
+inline typename ObjectWrap<T>::PropertyDescriptor
+ObjectWrap<T>::InstanceAccessor(Napi::Symbol name,
+                                napi_property_attributes attributes,
+                                void *data) {
+  return Napi::ObjectWrap<This>::template InstanceAccessor<
+      &This::InstanceMethodCallback<getter>>(name, attributes, data);
+}
+
+template <typename T>
 template <auto T::*getter, auto T::*setter>
 inline typename ObjectWrap<T>::PropertyDescriptor
 ObjectWrap<T>::InstanceAccessor(Napi::Symbol name,
                                 napi_property_attributes attributes,
                                 void *data) {
-  if constexpr (setter == nullptr) {
-    return Napi::ObjectWrap<This>::template InstanceAccessor<
-        &This::InstanceMethodCallback<getter>>(name, attributes, data);
-  } else {
-    return Napi::ObjectWrap<This>::template InstanceAccessor<
-        &This::InstanceMethodCallback<getter>,
-        &This::InstanceSetterCallback<setter>>(name, attributes, data);
-  }
+  return Napi::ObjectWrap<This>::template InstanceAccessor<
+      &This::InstanceMethodCallback<getter>,
+      &This::InstanceSetterCallback<setter>>(name, attributes, data);
 }
 
 template <typename T>
@@ -820,20 +831,20 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticMethod(
 }
 
 template <typename T>
+template <auto getter>
+inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticAccessor(
+    const char *name, napi_property_attributes attributes, void *data) {
+  return Napi::ObjectWrap<This>::template StaticAccessor<
+      &This::StaticMethodCallback<getter>>(name, attributes, data);
+}
+
+template <typename T>
 template <auto getter, auto setter>
 inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticAccessor(
     const char *name, napi_property_attributes attributes, void *data) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Waddress"
-  if constexpr (setter == nullptr) {
-#pragma GCC diagnostic pop
-    return Napi::ObjectWrap<This>::template StaticAccessor<
-        &This::StaticMethodCallback<getter>>(name, attributes, data);
-  } else {
-    return Napi::ObjectWrap<This>::template StaticAccessor<
-        &This::StaticMethodCallback<getter>,
-        &This::StaticSetterCallback<setter>>(name, attributes, data);
-  }
+  return Napi::ObjectWrap<This>::template StaticAccessor<
+      &This::StaticMethodCallback<getter>, &This::StaticSetterCallback<setter>>(
+      name, attributes, data);
 }
 
 template <typename T>
@@ -845,24 +856,23 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticMethod(
 }
 
 template <typename T>
+template <auto getter>
+inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticAccessor(
+    Napi::Symbol name, napi_property_attributes attributes, void *data) {
+  return Napi::ObjectWrap<This>::template StaticAccessor<
+      &This::StaticMethodCallback<getter>>(name, attributes, data);
+}
+
+template <typename T>
 template <auto getter, auto setter>
 inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticAccessor(
     Napi::Symbol name, napi_property_attributes attributes, void *data) {
-#pragma GCC diagnostic push
-// bypass GCC bug https://stackoverflow.com/q/62837080
-#pragma GCC diagnostic ignored "-Waddress"
-  if constexpr (setter == nullptr) {
-#pragma GCC diagnostic pop
-    return Napi::ObjectWrap<This>::template StaticAccessor<
-        &This::StaticMethodCallback<getter>>(name, attributes, data);
-  } else {
-    return Napi::ObjectWrap<This>::template StaticAccessor<
-        &This::StaticMethodCallback<getter>,
-        &This::StaticSetterCallback<setter>>(name, attributes, data);
-  }
+  return Napi::ObjectWrap<This>::template StaticAccessor<
+      &This::StaticMethodCallback<getter>, &This::StaticSetterCallback<setter>>(
+      name, attributes, data);
 }
 
-#if NAPI_VERSION >= 8
+#ifdef NAPI_HELPER_TAG_OBJECT_WRAP
 
 template <typename T>
 inline const napi_type_tag *ObjectWrap<T>::type_tag() {
