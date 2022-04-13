@@ -1,7 +1,7 @@
 {
   "name": "node-addon-api-helper",
   "version": "0.0.1",
-  "description": "",
+  "description": "Simplify node-addon-api native binding development with C++ meta programming",
   "main": "index.js",
   "scripts": {
     "ut": "mocha 'test/*.js'",
@@ -15,8 +15,11 @@
     "lint:fix": "node node_modules/node-addon-api/tools/clang-format --fix && node node_modules/node-addon-api/tools/eslint-format --fix",
     "prepare": "husky install"
   },
-  "author": "ajihyf",
-  "license": "ISC",
+  "author": {
+    "name": "ajihyf",
+    "url": "https://github.com/ajihyf"
+  },
+  "license": "MIT",
   "devDependencies": {
     "bindings": "^1.5.0",
     "chai": "^4.3.6",
@@ -33,5 +36,20 @@
   "files": [
     "*.{c,h,gyp,gypi}"
   ],
-  "gypfile": false
+  "gypfile": false,
+  "homepage": "https://github.com/ajihyf/node-addon-api-helper",
+  "keywords": [
+    "n-api",
+    "napi",
+    "addon",
+    "native",
+    "bindings",
+    "c",
+    "c++",
+    "node-addon-api"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:ajihyf/node-addon-api-helper.git"
+  }
 }
