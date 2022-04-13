@@ -56,13 +56,15 @@ class AnotherTestObject {
  public:
   using Wrapped = NapiHelper::ObjectWrap<AnotherTestObject>;
 
+  AnotherTestObject(const Napi::CallbackInfo&) {}
+
   TestObject::Wrapped* AddTest(TestObject::Wrapped* obj, uint32_t num) {
     obj->wrapped().Add(num);
     return obj;
   }
 
   static Napi::Function DefineClass(Napi::Env env) {
-    return Wrapped::DefineClass(
+    return Wrapped::DefineClass<const Napi::CallbackInfo&>(
         env, "AnotherTestObject",
         {Wrapped::InstanceMethod<&AnotherTestObject::AddTest>("addTest")});
   }
