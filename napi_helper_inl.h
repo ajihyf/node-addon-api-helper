@@ -3,422 +3,13 @@
 
 #include <optional>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <variant>
 
 namespace NapiHelper {
 
 namespace details {
-template <typename T, typename Enabled = void>
-struct ValueTransformer {
-  static std::optional<T> FromJS(Napi::Value);
-
-  static Napi::Value ToJS(Napi::Env, T &);
-};
-
-template <>
-struct ValueTransformer<Undefined> {
-  static std::optional<Undefined> FromJS(Napi::Value v) {
-    if (!v.IsUndefined()) {
-      return {};
-    }
-    return Undefined{};
-  }
-  static Napi::Value ToJS(Napi::Env env, Undefined &) {
-    return env.Undefined();
-  }
-};
-
-template <>
-struct ValueTransformer<Null> {
-  static std::optional<Null> FromJS(Napi::Value v) {
-    if (!v.IsNull()) {
-      return {};
-    }
-    return Null{};
-  }
-  static Napi::Value ToJS(Napi::Env env, Null &) { return env.Null(); }
-};
-
-template <>
-struct ValueTransformer<Napi::Value> {
-  static std::optional<Napi::Value> FromJS(Napi::Value v) { return v; }
-  static Napi::Value ToJS(Napi::Env, Napi::Value &val) { return val; }
-};
-
-template <typename T, bool (Napi::Value::*IsT)() const>
-struct JSValueTransformer {
-  static std::optional<T> FromJS(Napi::Value value) {
-    if (!(value.*IsT)()) {
-      return {};
-    }
-    return value.As<T>();
-  }
-
-  static Napi::Value ToJS(Napi::Env, T &val) { return val; }
-};
-
-template <>
-struct ValueTransformer<Napi::Boolean>
-    : public JSValueTransformer<Napi::Boolean, &Napi::Value::IsBoolean> {};
-
-template <>
-struct ValueTransformer<Napi::Number>
-    : public JSValueTransformer<Napi::Number, &Napi::Value::IsNumber> {};
-
-#if NAPI_VERSION > 5
-template <>
-struct ValueTransformer<Napi::BigInt>
-    : public JSValueTransformer<Napi::BigInt, &Napi::Value::IsBigInt> {};
-#endif
-
-#if (NAPI_VERSION > 4)
-template <>
-struct ValueTransformer<Napi::Date>
-    : public JSValueTransformer<Napi::Date, &Napi::Value::IsDate> {};
-#endif
-
-template <>
-struct ValueTransformer<Napi::String>
-    : public JSValueTransformer<Napi::String, &Napi::Value::IsString> {};
-
-template <>
-struct ValueTransformer<Napi::Symbol>
-    : public JSValueTransformer<Napi::Symbol, &Napi::Value::IsSymbol> {};
-
-template <>
-struct ValueTransformer<Napi::Array>
-    : public JSValueTransformer<Napi::Array, &Napi::Value::IsArray> {};
-
-template <>
-struct ValueTransformer<Napi::ArrayBuffer>
-    : public JSValueTransformer<Napi::ArrayBuffer,
-                                &Napi::Value::IsArrayBuffer> {};
-
-template <>
-struct ValueTransformer<Napi::TypedArray>
-    : public JSValueTransformer<Napi::TypedArray, &Napi::Value::IsTypedArray> {
-};
-
-template <>
-struct ValueTransformer<Napi::Object>
-    : public JSValueTransformer<Napi::Object, &Napi::Value::IsObject> {};
-
-template <>
-struct ValueTransformer<Napi::Function>
-    : public JSValueTransformer<Napi::Function, &Napi::Value::IsFunction> {};
-
-template <>
-struct ValueTransformer<Napi::Promise>
-    : public JSValueTransformer<Napi::Promise, &Napi::Value::IsPromise> {};
-
-template <>
-struct ValueTransformer<Napi::DataView>
-    : public JSValueTransformer<Napi::DataView, &Napi::Value::IsDataView> {};
-
-template <typename T>
-struct ValueTransformer<Napi::Buffer<T>>
-    : public JSValueTransformer<Napi::Buffer<T>, &Napi::Value::IsBuffer> {};
-
-template <typename T>
-struct ValueTransformer<Napi::External<T>>
-    : public JSValueTransformer<Napi::External<T>, &Napi::Value::IsExternal> {};
-
-template <typename T, napi_typedarray_type type>
-struct TypedArrayTransformer {
-  static std::optional<T> FromJS(Napi::Value value) {
-    if (!value.IsTypedArray()) {
-      return {};
-    }
-    Napi::TypedArray arr = value.As<Napi::TypedArray>();
-    if (arr.TypedArrayType() != type) {
-      return {};
-    }
-    return value.As<T>();
-  }
-
-  static Napi::Value ToJS(Napi::Env, T &val) { return val; }
-};
-
-template <>
-struct ValueTransformer<Napi::Int8Array>
-    : public TypedArrayTransformer<Napi::Int8Array, napi_int8_array> {};
-
-template <>
-struct ValueTransformer<Napi::Uint8Array>
-    : public TypedArrayTransformer<Napi::Uint8Array, napi_uint8_array> {};
-
-template <>
-struct ValueTransformer<Napi::Int16Array>
-    : public TypedArrayTransformer<Napi::Int16Array, napi_int16_array> {};
-
-template <>
-struct ValueTransformer<Napi::Uint16Array>
-    : public TypedArrayTransformer<Napi::Uint16Array, napi_uint16_array> {};
-
-template <>
-struct ValueTransformer<Napi::Int32Array>
-    : public TypedArrayTransformer<Napi::Int32Array, napi_int32_array> {};
-
-template <>
-struct ValueTransformer<Napi::Uint32Array>
-    : public TypedArrayTransformer<Napi::Uint32Array, napi_uint32_array> {};
-
-template <>
-struct ValueTransformer<Napi::Float32Array>
-    : public TypedArrayTransformer<Napi::Float32Array, napi_float32_array> {};
-
-template <>
-struct ValueTransformer<Napi::Float64Array>
-    : public TypedArrayTransformer<Napi::Float64Array, napi_float64_array> {};
-
-#if NAPI_VERSION > 5
-template <>
-struct ValueTransformer<Napi::BigInt64Array>
-    : public TypedArrayTransformer<Napi::BigInt64Array, napi_bigint64_array> {};
-
-template <>
-struct ValueTransformer<Napi::BigUint64Array>
-    : public TypedArrayTransformer<Napi::BigUint64Array, napi_biguint64_array> {
-};
-#endif
-
-template <>
-struct ValueTransformer<bool> {
-  static std::optional<bool> FromJS(Napi::Value value) {
-    if (!value.IsBoolean()) {
-      return {};
-    }
-    return value.As<Napi::Boolean>().Value();
-  }
-
-  static Napi::Value ToJS(Napi::Env env, bool &num) {
-    return Napi::Boolean::New(env, num);
-  }
-};
-
-template <>
-struct ValueTransformer<double> {
-  static std::optional<double> FromJS(Napi::Value value) {
-    if (!value.IsNumber()) {
-      return {};
-    }
-    return value.As<Napi::Number>().DoubleValue();
-  }
-
-  static Napi::Value ToJS(Napi::Env env, double &num) {
-    return Napi::Number::New(env, num);
-  }
-};
-
-template <>
-struct ValueTransformer<float> {
-  static std::optional<float> FromJS(Napi::Value value) {
-    if (!value.IsNumber()) {
-      return {};
-    }
-    return value.As<Napi::Number>().FloatValue();
-  }
-
-  static Napi::Value ToJS(Napi::Env env, float &num) {
-    return Napi::Number::New(env, num);
-  }
-};
-
-template <typename Uint>
-struct ValueTransformer<
-    Uint, typename std::enable_if_t<std::is_same_v<Uint, uint8_t> ||
-                                    std::is_same_v<Uint, uint16_t> ||
-                                    std::is_same_v<Uint, uint32_t>>> {
-  static std::optional<Uint> FromJS(Napi::Value value) {
-    if (!value.IsNumber()) {
-      return {};
-    }
-    return value.As<Napi::Number>().Uint32Value();
-  }
-
-  static Napi::Value ToJS(Napi::Env env, Uint &num) {
-    return Napi::Number::New(env, num);
-  }
-};
-
-template <typename Int>
-struct ValueTransformer<
-    Int, typename std::enable_if_t<std::is_same_v<Int, int8_t> ||
-                                   std::is_same_v<Int, int16_t> ||
-                                   std::is_same_v<Int, int32_t>>> {
-  static std::optional<Int> FromJS(Napi::Value value) {
-    if (!value.IsNumber()) {
-      return {};
-    }
-    return value.As<Napi::Number>().Int32Value();
-  }
-
-  static Napi::Value ToJS(Napi::Env env, Int &num) {
-    return Napi::Number::New(env, num);
-  }
-};
-
-#if NAPI_VERSION > 5
-template <>
-struct ValueTransformer<int64_t> {
-  static std::optional<int64_t> FromJS(Napi::Value value) {
-    if (!value.IsBigInt()) {
-      return {};
-    }
-    bool lossless = true;
-    return value.As<Napi::BigInt>().Int64Value(&lossless);
-  }
-
-  static Napi::Value ToJS(Napi::Env env, int64_t &num) {
-    return Napi::BigInt::New(env, num);
-  }
-};
-
-template <>
-struct ValueTransformer<uint64_t> {
-  static std::optional<uint64_t> FromJS(Napi::Value value) {
-    if (!value.IsBigInt()) {
-      return {};
-    }
-    bool lossless = true;
-    return value.As<Napi::BigInt>().Uint64Value(&lossless);
-  }
-
-  static Napi::Value ToJS(Napi::Env env, uint64_t &num) {
-    return Napi::BigInt::New(env, num);
-  }
-};
-#endif
-
-template <>
-struct ValueTransformer<std::string> {
-  static std::optional<std::string> FromJS(Napi::Value value) {
-    if (!value.IsString()) {
-      return {};
-    }
-    return value.As<Napi::String>().Utf8Value();
-  }
-
-  static Napi::Value ToJS(Napi::Env env, std::string &str) {
-    return Napi::String::New(env, str);
-  }
-};
-
-template <>
-struct ValueTransformer<std::u16string> {
-  static std::optional<std::u16string> FromJS(Napi::Value value) {
-    if (!value.IsString()) {
-      return {};
-    }
-    return value.As<Napi::String>().Utf16Value();
-  }
-
-  static Napi::Value ToJS(Napi::Env env, std::u16string &str) {
-    return Napi::String::New(env, str);
-  }
-};
-
-template <typename T>
-struct ValueTransformer<std::optional<T>> {
-  static Napi::Value ToJS(Napi::Env env, std::optional<T> &val) {
-    if (val.has_value()) {
-      return ValueTransformer<T>::ToJS(env, *val);
-    }
-    return env.Undefined();
-  }
-};
-
-template <typename... Args>
-struct ValueTransformer<std::variant<Args...>> {
- private:
-  using Variants = std::variant<Args...>;
-
-  template <size_t I>
-  static std::optional<Variants> FromJS([[maybe_unused]] Napi::Value value) {
-    if constexpr (I < sizeof...(Args)) {
-      using TypeI = std::variant_alternative_t<I, Variants>;
-      std::optional<TypeI> result = ValueTransformer<TypeI>::FromJS(value);
-      if (result.has_value()) {
-        return std::move(*result);
-      }
-      return FromJS<I + 1>(value);
-    } else {
-      return {};
-    }
-  }
-
- public:
-  static std::optional<Variants> FromJS(Napi::Value value) {
-    return FromJS<0>(value);
-  }
-
-  static Napi::Value ToJS(Napi::Env env, Variants &v) {
-    return std::visit(
-        [&](auto &&arg) -> Napi::Value {
-          using T = std::decay_t<decltype(arg)>;
-          return ValueTransformer<T>::ToJS(env, arg);
-        },
-        v);
-  }
-};
-
-template <typename T>
-struct ValueTransformer<std::vector<T>> {
-  static std::optional<std::vector<T>> FromJS(Napi::Value value) {
-    if (!value.IsArray()) {
-      return {};
-    }
-    Napi::Array arr = value.As<Napi::Array>();
-    uint32_t len = arr.Length();
-    std::vector<T> result;
-    result.reserve(len);
-    for (uint32_t i = 0; i < len; i++) {
-      std::optional<T> item = ValueTransformer<T>::FromJS(arr.Get(i));
-      if (!item.has_value()) {
-        return {};
-      }
-      result.push_back(std::move(*item));
-    }
-    return std::move(result);
-  }
-
-  static Napi::Value ToJS(Napi::Env env, std::vector<T> &arr) {
-    Napi::Array result = Napi::Array::New(env, arr.size());
-    for (uint32_t i = 0; i < arr.size(); i++) {
-      result.Set(i, ValueTransformer<T>::ToJS(env, arr[i]));
-    }
-    return result;
-  }
-};
-
-#ifdef NAPI_HELPER_TAG_OBJECT_WRAP
-
-template <typename T>
-struct ValueTransformer<ObjectWrap<T> *> {
- private:
-  using Type = ObjectWrap<T>;
-
- public:
-  static std::optional<Type *> FromJS(Napi::Value value) {
-    if (!value.IsObject()) {
-      return {};
-    }
-    Napi::Object obj = value.As<Napi::Object>();
-    bool check_tag = false;
-    napi_check_object_type_tag(value.Env(), obj, Type::type_tag(), &check_tag);
-    if (!check_tag) {
-      return {};
-    }
-    return Type::Unwrap(obj);
-  }
-
-  static Napi::Value ToJS(Napi::Env, Type *&wrappable) {
-    return wrappable->Value();
-  }
-};
-
-#endif
 
 template <typename T, typename Enable = void>
 struct is_optional : std::false_type {};
@@ -522,43 +113,6 @@ class ArgsConverter<std::tuple<Head, Rest...>> {
   }
 };
 
-template <typename... Args>
-struct ValueTransformer<std::tuple<Args...>> {
- private:
-  using Tuple = std::tuple<Args...>;
-
-  template <size_t... Is>
-  static void SetArrayElement(Napi::Env env, Napi::Array &arr, Tuple &t,
-                              std::index_sequence<Is...>) {
-    (arr.Set(static_cast<uint32_t>(Is),
-             ValueTransformer<std::tuple_element_t<Is, Tuple>>::ToJS(
-                 env, std::get<Is>(t))),
-     ...);
-  }
-
- public:
-  static std::optional<Tuple> FromJS(Napi::Value value) {
-    if (!value.IsArray()) {
-      return {};
-    }
-    return ArgsConverter<Tuple>::Get(value.As<Napi::Array>(), 0);
-  }
-
-  static Napi::Value ToJS(Napi::Env env, Tuple &t) {
-    return std::apply(
-        [&](auto &&...elements) -> Napi::Array {
-          constexpr size_t size = sizeof...(elements);
-
-          Napi::Array result = Napi::Array::New(env, size);
-
-          SetArrayElement(env, result, t, std::make_index_sequence<size>());
-
-          return result;
-        },
-        t);
-  }
-};
-
 class Invoker {
  private:
   template <typename Callable>
@@ -646,6 +200,480 @@ class Invoker {
 
 }  // namespace details
 
+template <>
+struct ValueTransformer<Undefined> {
+  static std::optional<Undefined> FromJS(Napi::Value v) {
+    if (!v.IsUndefined()) {
+      return {};
+    }
+    return Undefined{};
+  }
+  static Napi::Value ToJS(Napi::Env env, const Undefined &) {
+    return env.Undefined();
+  }
+};
+
+template <>
+struct ValueTransformer<Null> {
+  static std::optional<Null> FromJS(Napi::Value v) {
+    if (!v.IsNull()) {
+      return {};
+    }
+    return Null{};
+  }
+  static Napi::Value ToJS(Napi::Env env, const Null &) { return env.Null(); }
+};
+
+template <>
+struct ValueTransformer<Napi::Value> {
+  static std::optional<Napi::Value> FromJS(Napi::Value v) { return v; }
+  static Napi::Value ToJS(Napi::Env, const Napi::Value &val) { return val; }
+};
+
+template <typename T, bool (Napi::Value::*IsT)() const>
+struct JSValueTransformer {
+  static std::optional<T> FromJS(Napi::Value value) {
+    if (!(value.*IsT)()) {
+      return {};
+    }
+    return value.As<T>();
+  }
+
+  static Napi::Value ToJS(Napi::Env, const T &val) { return val; }
+};
+
+template <>
+struct ValueTransformer<Napi::Boolean>
+    : public JSValueTransformer<Napi::Boolean, &Napi::Value::IsBoolean> {};
+
+template <>
+struct ValueTransformer<Napi::Number>
+    : public JSValueTransformer<Napi::Number, &Napi::Value::IsNumber> {};
+
+#if NAPI_VERSION > 5
+template <>
+struct ValueTransformer<Napi::BigInt>
+    : public JSValueTransformer<Napi::BigInt, &Napi::Value::IsBigInt> {};
+#endif
+
+#if (NAPI_VERSION > 4)
+template <>
+struct ValueTransformer<Napi::Date>
+    : public JSValueTransformer<Napi::Date, &Napi::Value::IsDate> {};
+#endif
+
+template <>
+struct ValueTransformer<Napi::String>
+    : public JSValueTransformer<Napi::String, &Napi::Value::IsString> {};
+
+template <>
+struct ValueTransformer<Napi::Symbol>
+    : public JSValueTransformer<Napi::Symbol, &Napi::Value::IsSymbol> {};
+
+template <>
+struct ValueTransformer<Napi::Array>
+    : public JSValueTransformer<Napi::Array, &Napi::Value::IsArray> {};
+
+template <>
+struct ValueTransformer<Napi::ArrayBuffer>
+    : public JSValueTransformer<Napi::ArrayBuffer,
+                                &Napi::Value::IsArrayBuffer> {};
+
+template <>
+struct ValueTransformer<Napi::TypedArray>
+    : public JSValueTransformer<Napi::TypedArray, &Napi::Value::IsTypedArray> {
+};
+
+template <>
+struct ValueTransformer<Napi::Object>
+    : public JSValueTransformer<Napi::Object, &Napi::Value::IsObject> {};
+
+template <>
+struct ValueTransformer<Napi::Function>
+    : public JSValueTransformer<Napi::Function, &Napi::Value::IsFunction> {};
+
+template <>
+struct ValueTransformer<Napi::Promise>
+    : public JSValueTransformer<Napi::Promise, &Napi::Value::IsPromise> {};
+
+template <>
+struct ValueTransformer<Napi::DataView>
+    : public JSValueTransformer<Napi::DataView, &Napi::Value::IsDataView> {};
+
+template <typename T>
+struct ValueTransformer<Napi::Buffer<T>>
+    : public JSValueTransformer<Napi::Buffer<T>, &Napi::Value::IsBuffer> {};
+
+template <typename T>
+struct ValueTransformer<Napi::External<T>>
+    : public JSValueTransformer<Napi::External<T>, &Napi::Value::IsExternal> {};
+
+template <typename T, napi_typedarray_type type>
+struct TypedArrayTransformer {
+  static std::optional<T> FromJS(Napi::Value value) {
+    if (!value.IsTypedArray()) {
+      return {};
+    }
+    Napi::TypedArray arr = value.As<Napi::TypedArray>();
+    if (arr.TypedArrayType() != type) {
+      return {};
+    }
+    return value.As<T>();
+  }
+
+  static Napi::Value ToJS(Napi::Env, const T &val) { return val; }
+};
+
+template <>
+struct ValueTransformer<Napi::Int8Array>
+    : public TypedArrayTransformer<Napi::Int8Array, napi_int8_array> {};
+
+template <>
+struct ValueTransformer<Napi::Uint8Array>
+    : public TypedArrayTransformer<Napi::Uint8Array, napi_uint8_array> {};
+
+template <>
+struct ValueTransformer<Napi::Int16Array>
+    : public TypedArrayTransformer<Napi::Int16Array, napi_int16_array> {};
+
+template <>
+struct ValueTransformer<Napi::Uint16Array>
+    : public TypedArrayTransformer<Napi::Uint16Array, napi_uint16_array> {};
+
+template <>
+struct ValueTransformer<Napi::Int32Array>
+    : public TypedArrayTransformer<Napi::Int32Array, napi_int32_array> {};
+
+template <>
+struct ValueTransformer<Napi::Uint32Array>
+    : public TypedArrayTransformer<Napi::Uint32Array, napi_uint32_array> {};
+
+template <>
+struct ValueTransformer<Napi::Float32Array>
+    : public TypedArrayTransformer<Napi::Float32Array, napi_float32_array> {};
+
+template <>
+struct ValueTransformer<Napi::Float64Array>
+    : public TypedArrayTransformer<Napi::Float64Array, napi_float64_array> {};
+
+#if NAPI_VERSION > 5
+template <>
+struct ValueTransformer<Napi::BigInt64Array>
+    : public TypedArrayTransformer<Napi::BigInt64Array, napi_bigint64_array> {};
+
+template <>
+struct ValueTransformer<Napi::BigUint64Array>
+    : public TypedArrayTransformer<Napi::BigUint64Array, napi_biguint64_array> {
+};
+#endif
+
+template <>
+struct ValueTransformer<bool> {
+  static std::optional<bool> FromJS(Napi::Value value) {
+    if (!value.IsBoolean()) {
+      return {};
+    }
+    return value.As<Napi::Boolean>().Value();
+  }
+
+  static Napi::Value ToJS(Napi::Env env, const bool &num) {
+    return Napi::Boolean::New(env, num);
+  }
+};
+
+template <>
+struct ValueTransformer<double> {
+  static std::optional<double> FromJS(Napi::Value value) {
+    if (!value.IsNumber()) {
+      return {};
+    }
+    return value.As<Napi::Number>().DoubleValue();
+  }
+
+  static Napi::Value ToJS(Napi::Env env, const double &num) {
+    return Napi::Number::New(env, num);
+  }
+};
+
+template <>
+struct ValueTransformer<float> {
+  static std::optional<float> FromJS(Napi::Value value) {
+    if (!value.IsNumber()) {
+      return {};
+    }
+    return value.As<Napi::Number>().FloatValue();
+  }
+
+  static Napi::Value ToJS(Napi::Env env, const float &num) {
+    return Napi::Number::New(env, num);
+  }
+};
+
+template <typename Uint>
+struct ValueTransformer<Uint,
+                        std::enable_if_t<std::is_same_v<Uint, uint8_t> ||
+                                         std::is_same_v<Uint, uint16_t> ||
+                                         std::is_same_v<Uint, uint32_t>>> {
+  static std::optional<Uint> FromJS(Napi::Value value) {
+    if (!value.IsNumber()) {
+      return {};
+    }
+    return value.As<Napi::Number>().Uint32Value();
+  }
+
+  static Napi::Value ToJS(Napi::Env env, const Uint &num) {
+    return Napi::Number::New(env, num);
+  }
+};
+
+template <typename Int>
+struct ValueTransformer<Int, std::enable_if_t<std::is_same_v<Int, int8_t> ||
+                                              std::is_same_v<Int, int16_t> ||
+                                              std::is_same_v<Int, int32_t>>> {
+  static std::optional<Int> FromJS(Napi::Value value) {
+    if (!value.IsNumber()) {
+      return {};
+    }
+    return value.As<Napi::Number>().Int32Value();
+  }
+
+  static Napi::Value ToJS(Napi::Env env, const Int &num) {
+    return Napi::Number::New(env, num);
+  }
+};
+
+#if NAPI_VERSION > 5
+template <>
+struct ValueTransformer<int64_t> {
+  static std::optional<int64_t> FromJS(Napi::Value value) {
+    if (!value.IsBigInt()) {
+      return {};
+    }
+    bool lossless = true;
+    return value.As<Napi::BigInt>().Int64Value(&lossless);
+  }
+
+  static Napi::Value ToJS(Napi::Env env, const int64_t &num) {
+    return Napi::BigInt::New(env, num);
+  }
+};
+
+template <>
+struct ValueTransformer<uint64_t> {
+  static std::optional<uint64_t> FromJS(Napi::Value value) {
+    if (!value.IsBigInt()) {
+      return {};
+    }
+    bool lossless = true;
+    return value.As<Napi::BigInt>().Uint64Value(&lossless);
+  }
+
+  static Napi::Value ToJS(Napi::Env env, const uint64_t &num) {
+    return Napi::BigInt::New(env, num);
+  }
+};
+#endif
+
+template <typename T>
+struct ValueTransformer<
+    T, std::enable_if_t<std::is_convertible_v<T, const char *>>> {
+ public:
+  static Napi::Value ToJS(Napi::Env env, const T &str) {
+    return Napi::String::New(env, str);
+  }
+};
+
+template <>
+struct ValueTransformer<std::string_view> {
+  static Napi::Value ToJS(Napi::Env env, const std::string_view &str) {
+    return Napi::String::New(env, str.data(), str.size());
+  }
+};
+
+template <>
+struct ValueTransformer<std::u16string_view> {
+  static Napi::Value ToJS(Napi::Env env, const std::u16string_view &str) {
+    return Napi::String::New(env, str.data(), str.size());
+  }
+};
+
+template <>
+struct ValueTransformer<std::string> {
+  static std::optional<std::string> FromJS(Napi::Value value) {
+    if (!value.IsString()) {
+      return {};
+    }
+    return value.As<Napi::String>().Utf8Value();
+  }
+
+  static Napi::Value ToJS(Napi::Env env, const std::string &str) {
+    return Napi::String::New(env, str);
+  }
+};
+
+template <>
+struct ValueTransformer<std::u16string> {
+  static std::optional<std::u16string> FromJS(Napi::Value value) {
+    if (!value.IsString()) {
+      return {};
+    }
+    return value.As<Napi::String>().Utf16Value();
+  }
+
+  static Napi::Value ToJS(Napi::Env env, const std::u16string &str) {
+    return Napi::String::New(env, str);
+  }
+};
+
+template <typename T>
+struct ValueTransformer<std::optional<T>> {
+  static Napi::Value ToJS(Napi::Env env, const std::optional<T> &val) {
+    if (val.has_value()) {
+      return ValueTransformer<T>::ToJS(env, *val);
+    }
+    return env.Undefined();
+  }
+};
+
+template <typename... Args>
+struct ValueTransformer<std::variant<Args...>> {
+ private:
+  using Variants = std::variant<Args...>;
+
+  template <size_t I>
+  static std::optional<Variants> FromJS([[maybe_unused]] Napi::Value value) {
+    if constexpr (I < sizeof...(Args)) {
+      using TypeI = std::variant_alternative_t<I, Variants>;
+      std::optional<TypeI> result = ValueTransformer<TypeI>::FromJS(value);
+      if (result.has_value()) {
+        return std::move(*result);
+      }
+      return FromJS<I + 1>(value);
+    } else {
+      return {};
+    }
+  }
+
+ public:
+  static std::optional<Variants> FromJS(Napi::Value value) {
+    return FromJS<0>(value);
+  }
+
+  static Napi::Value ToJS(Napi::Env env, const Variants &v) {
+    return std::visit(
+        [&](auto &&arg) -> Napi::Value {
+          using T = std::decay_t<decltype(arg)>;
+          return ValueTransformer<T>::ToJS(env, arg);
+        },
+        v);
+  }
+};
+
+template <typename... Args>
+struct ValueTransformer<std::tuple<Args...>> {
+ private:
+  using Tuple = std::tuple<Args...>;
+
+  template <size_t... Is>
+  static void SetArrayElement(Napi::Env env, Napi::Array &arr, const Tuple &t,
+                              std::index_sequence<Is...>) {
+    (arr.Set(static_cast<uint32_t>(Is),
+             ValueTransformer<std::tuple_element_t<Is, Tuple>>::ToJS(
+                 env, std::get<Is>(t))),
+     ...);
+  }
+
+ public:
+  static std::optional<Tuple> FromJS(Napi::Value value) {
+    if (!value.IsArray()) {
+      return {};
+    }
+    return details::ArgsConverter<Tuple>::Get(value.As<Napi::Array>(), 0);
+  }
+
+  static Napi::Value ToJS(Napi::Env env, const Tuple &t) {
+    return std::apply(
+        [&](auto &&...elements) -> Napi::Array {
+          constexpr size_t size = sizeof...(elements);
+
+          Napi::Array result = Napi::Array::New(env, size);
+
+          SetArrayElement(env, result, t, std::make_index_sequence<size>());
+
+          return result;
+        },
+        t);
+  }
+};
+
+template <typename T>
+struct ValueTransformer<std::vector<T>> {
+  static std::optional<std::vector<T>> FromJS(Napi::Value value) {
+    if (!value.IsArray()) {
+      return {};
+    }
+    Napi::Array arr = value.As<Napi::Array>();
+    uint32_t len = arr.Length();
+    std::vector<T> result;
+    result.reserve(len);
+    for (uint32_t i = 0; i < len; i++) {
+      std::optional<T> item = ValueTransformer<T>::FromJS(arr.Get(i));
+      if (!item.has_value()) {
+        return {};
+      }
+      result.push_back(std::move(*item));
+    }
+    return std::move(result);
+  }
+
+  static Napi::Value ToJS(Napi::Env env, const std::vector<T> &arr) {
+    Napi::Array result = Napi::Array::New(env, arr.size());
+    for (uint32_t i = 0; i < arr.size(); i++) {
+      result.Set(i, ValueTransformer<T>::ToJS(env, arr[i]));
+    }
+    return result;
+  }
+};
+
+#ifdef NAPI_HELPER_TAG_OBJECT_WRAP
+
+template <typename T>
+struct ValueTransformer<ScriptWrappable<T> *> {
+ private:
+  using Type = ScriptWrappable<T> *;
+
+ public:
+  static std::optional<Type> FromJS(Napi::Value value) {
+    if (!value.IsObject()) {
+      return {};
+    }
+    Napi::Object obj = value.As<Napi::Object>();
+    bool check_tag = false;
+    napi_check_object_type_tag(value.Env(), obj, ScriptWrappable<T>::type_tag(),
+                               &check_tag);
+    if (!check_tag) {
+      return {};
+    }
+    return ScriptWrappable<T>::Unwrap(obj);
+  }
+
+  static Napi::Value ToJS(Napi::Env, const Type &wrappable) {
+    return wrappable->Value();
+  }
+};
+
+#endif
+
+template <typename T>
+inline std::optional<T> Convert::FromJS(Napi::Value v) {
+  return ValueTransformer<T>::FromJS(v);
+}
+
+template <typename T>
+inline Napi::Value Convert::ToJS(Napi::Env env, const T &v) {
+  return ValueTransformer<T>::ToJS(env, v);
+}
+
 inline Error::Error(const char *msg) : _message(msg) {}
 inline Error::Error(const std::string &msg) : _message(msg) {}
 
@@ -692,7 +720,7 @@ inline Napi::Function Function::New(Napi::Env env, Callable fn,
 }
 
 template <typename T>
-inline ObjectWrap<T>::ObjectWrap(const Napi::CallbackInfo &info)
+inline ScriptWrappable<T>::ScriptWrappable(const Napi::CallbackInfo &info)
     : Napi::ObjectWrap<This>(info) {
 #ifdef NAPI_HELPER_TAG_OBJECT_WRAP
   napi_type_tag_object(info.Env(), info.This(), type_tag());
@@ -703,13 +731,13 @@ inline ObjectWrap<T>::ObjectWrap(const Napi::CallbackInfo &info)
 }
 
 template <typename T>
-inline T &ObjectWrap<T>::wrapped() const {
+inline T &ScriptWrappable<T>::wrapped() const {
   return *_wrapped;
 }
 
 template <typename T>
 template <typename... CtorArgs>
-Napi::Function ObjectWrap<T>::DefineClass(
+Napi::Function ScriptWrappable<T>::DefineClass(
     Napi::Env env, const char *utf8name,
     const std::initializer_list<PropertyDescriptor> &properties) {
   using Wrapped = Napi::ObjectWrap<This>;
@@ -722,7 +750,7 @@ Napi::Function ObjectWrap<T>::DefineClass(
 
 template <typename T>
 template <typename... CtorArgs>
-Napi::Function ObjectWrap<T>::DefineClass(
+Napi::Function ScriptWrappable<T>::DefineClass(
     Napi::Env env, const char *utf8name,
     const std::vector<PropertyDescriptor> &properties) {
   using Wrapped = Napi::ObjectWrap<This>;
@@ -736,7 +764,7 @@ Napi::Function ObjectWrap<T>::DefineClass(
 
 template <typename T>
 template <auto T::*fn>
-inline auto ObjectWrap<T>::InstanceMethodCallback(
+inline auto ScriptWrappable<T>::InstanceMethodCallback(
     const Napi::CallbackInfo &info) {
   return details::Invoker::CallJS(
       info, details::Invoker::InstanceCall(_wrapped.get(), fn));
@@ -744,7 +772,7 @@ inline auto ObjectWrap<T>::InstanceMethodCallback(
 
 template <typename T>
 template <auto T::*fn>
-inline void ObjectWrap<T>::InstanceSetterCallback(
+inline void ScriptWrappable<T>::InstanceSetterCallback(
     const Napi::CallbackInfo &info, const Napi::Value &) {
   details::Invoker::CallJS(info,
                            details::Invoker::InstanceCall(_wrapped.get(), fn));
@@ -752,28 +780,30 @@ inline void ObjectWrap<T>::InstanceSetterCallback(
 
 template <typename T>
 template <auto T::*fn>
-inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::InstanceMethod(
-    const char *name, napi_property_attributes attributes, void *data) {
+inline typename ScriptWrappable<T>::PropertyDescriptor
+ScriptWrappable<T>::InstanceMethod(const char *name,
+                                   napi_property_attributes attributes,
+                                   void *data) {
   return Napi::ObjectWrap<This>::template InstanceMethod<
       &This::InstanceMethodCallback<fn>>(name, attributes, data);
 }
 
 template <typename T>
 template <auto T::*getter>
-inline typename ObjectWrap<T>::PropertyDescriptor
-ObjectWrap<T>::InstanceAccessor(const char *name,
-                                napi_property_attributes attributes,
-                                void *data) {
+inline typename ScriptWrappable<T>::PropertyDescriptor
+ScriptWrappable<T>::InstanceAccessor(const char *name,
+                                     napi_property_attributes attributes,
+                                     void *data) {
   return Napi::ObjectWrap<This>::template InstanceAccessor<
       &This::InstanceMethodCallback<getter>>(name, attributes, data);
 }
 
 template <typename T>
 template <auto T::*getter, auto T::*setter>
-inline typename ObjectWrap<T>::PropertyDescriptor
-ObjectWrap<T>::InstanceAccessor(const char *name,
-                                napi_property_attributes attributes,
-                                void *data) {
+inline typename ScriptWrappable<T>::PropertyDescriptor
+ScriptWrappable<T>::InstanceAccessor(const char *name,
+                                     napi_property_attributes attributes,
+                                     void *data) {
   return Napi::ObjectWrap<This>::template InstanceAccessor<
       &This::InstanceMethodCallback<getter>,
       &This::InstanceSetterCallback<setter>>(name, attributes, data);
@@ -781,28 +811,30 @@ ObjectWrap<T>::InstanceAccessor(const char *name,
 
 template <typename T>
 template <auto T::*fn>
-inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::InstanceMethod(
-    Napi::Symbol name, napi_property_attributes attributes, void *data) {
+inline typename ScriptWrappable<T>::PropertyDescriptor
+ScriptWrappable<T>::InstanceMethod(Napi::Symbol name,
+                                   napi_property_attributes attributes,
+                                   void *data) {
   return Napi::ObjectWrap<This>::template InstanceMethod<
       &This::InstanceMethodCallback<fn>>(name, attributes, data);
 }
 
 template <typename T>
 template <auto T::*getter>
-inline typename ObjectWrap<T>::PropertyDescriptor
-ObjectWrap<T>::InstanceAccessor(Napi::Symbol name,
-                                napi_property_attributes attributes,
-                                void *data) {
+inline typename ScriptWrappable<T>::PropertyDescriptor
+ScriptWrappable<T>::InstanceAccessor(Napi::Symbol name,
+                                     napi_property_attributes attributes,
+                                     void *data) {
   return Napi::ObjectWrap<This>::template InstanceAccessor<
       &This::InstanceMethodCallback<getter>>(name, attributes, data);
 }
 
 template <typename T>
 template <auto T::*getter, auto T::*setter>
-inline typename ObjectWrap<T>::PropertyDescriptor
-ObjectWrap<T>::InstanceAccessor(Napi::Symbol name,
-                                napi_property_attributes attributes,
-                                void *data) {
+inline typename ScriptWrappable<T>::PropertyDescriptor
+ScriptWrappable<T>::InstanceAccessor(Napi::Symbol name,
+                                     napi_property_attributes attributes,
+                                     void *data) {
   return Napi::ObjectWrap<This>::template InstanceAccessor<
       &This::InstanceMethodCallback<getter>,
       &This::InstanceSetterCallback<setter>>(name, attributes, data);
@@ -810,38 +842,44 @@ ObjectWrap<T>::InstanceAccessor(Napi::Symbol name,
 
 template <typename T>
 template <auto fn>
-inline auto ObjectWrap<T>::StaticMethodCallback(
+inline auto ScriptWrappable<T>::StaticMethodCallback(
     const Napi::CallbackInfo &info) {
   return details::Invoker::CallJS(info, fn);
 }
 
 template <typename T>
 template <auto fn>
-inline void ObjectWrap<T>::StaticSetterCallback(const Napi::CallbackInfo &info,
-                                                const Napi::Value &) {
+inline void ScriptWrappable<T>::StaticSetterCallback(
+    const Napi::CallbackInfo &info, const Napi::Value &) {
   details::Invoker::CallJS(info, fn);
 }
 
 template <typename T>
 template <auto fn>
-inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticMethod(
-    const char *name, napi_property_attributes attributes, void *data) {
+inline typename ScriptWrappable<T>::PropertyDescriptor
+ScriptWrappable<T>::StaticMethod(const char *name,
+                                 napi_property_attributes attributes,
+                                 void *data) {
   return Napi::ObjectWrap<This>::template StaticMethod<
       &This::StaticMethodCallback<fn>>(name, attributes, data);
 }
 
 template <typename T>
 template <auto getter>
-inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticAccessor(
-    const char *name, napi_property_attributes attributes, void *data) {
+inline typename ScriptWrappable<T>::PropertyDescriptor
+ScriptWrappable<T>::StaticAccessor(const char *name,
+                                   napi_property_attributes attributes,
+                                   void *data) {
   return Napi::ObjectWrap<This>::template StaticAccessor<
       &This::StaticMethodCallback<getter>>(name, attributes, data);
 }
 
 template <typename T>
 template <auto getter, auto setter>
-inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticAccessor(
-    const char *name, napi_property_attributes attributes, void *data) {
+inline typename ScriptWrappable<T>::PropertyDescriptor
+ScriptWrappable<T>::StaticAccessor(const char *name,
+                                   napi_property_attributes attributes,
+                                   void *data) {
   return Napi::ObjectWrap<This>::template StaticAccessor<
       &This::StaticMethodCallback<getter>, &This::StaticSetterCallback<setter>>(
       name, attributes, data);
@@ -849,24 +887,30 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticAccessor(
 
 template <typename T>
 template <auto fn>
-inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticMethod(
-    Napi::Symbol name, napi_property_attributes attributes, void *data) {
+inline typename ScriptWrappable<T>::PropertyDescriptor
+ScriptWrappable<T>::StaticMethod(Napi::Symbol name,
+                                 napi_property_attributes attributes,
+                                 void *data) {
   return Napi::ObjectWrap<This>::template StaticMethod<
       &This::StaticMethodCallback<fn>>(name, attributes, data);
 }
 
 template <typename T>
 template <auto getter>
-inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticAccessor(
-    Napi::Symbol name, napi_property_attributes attributes, void *data) {
+inline typename ScriptWrappable<T>::PropertyDescriptor
+ScriptWrappable<T>::StaticAccessor(Napi::Symbol name,
+                                   napi_property_attributes attributes,
+                                   void *data) {
   return Napi::ObjectWrap<This>::template StaticAccessor<
       &This::StaticMethodCallback<getter>>(name, attributes, data);
 }
 
 template <typename T>
 template <auto getter, auto setter>
-inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticAccessor(
-    Napi::Symbol name, napi_property_attributes attributes, void *data) {
+inline typename ScriptWrappable<T>::PropertyDescriptor
+ScriptWrappable<T>::StaticAccessor(Napi::Symbol name,
+                                   napi_property_attributes attributes,
+                                   void *data) {
   return Napi::ObjectWrap<This>::template StaticAccessor<
       &This::StaticMethodCallback<getter>, &This::StaticSetterCallback<setter>>(
       name, attributes, data);
@@ -875,7 +919,7 @@ inline typename ObjectWrap<T>::PropertyDescriptor ObjectWrap<T>::StaticAccessor(
 #ifdef NAPI_HELPER_TAG_OBJECT_WRAP
 
 template <typename T>
-inline const napi_type_tag *ObjectWrap<T>::type_tag() {
+inline const napi_type_tag *ScriptWrappable<T>::type_tag() {
   static const napi_type_tag tag = {reinterpret_cast<uintptr_t>(&tag),
                                     reinterpret_cast<uintptr_t>(&tag)};
   return &tag;

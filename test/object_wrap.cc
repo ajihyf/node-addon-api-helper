@@ -3,7 +3,7 @@
 namespace {
 class TestObject {
  public:
-  using Wrapped = NapiHelper::ObjectWrap<TestObject>;
+  using Wrapped = NapiHelper::ScriptWrappable<TestObject>;
 
   TestObject(uint32_t num) : _num(num) {}
 
@@ -54,7 +54,7 @@ uint32_t TestObject::_count = 0;
 
 class AnotherTestObject {
  public:
-  using Wrapped = NapiHelper::ObjectWrap<AnotherTestObject>;
+  using Wrapped = NapiHelper::ScriptWrappable<AnotherTestObject>;
 
   AnotherTestObject(const Napi::CallbackInfo&) {}
 

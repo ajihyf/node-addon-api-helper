@@ -12,6 +12,21 @@
 
 namespace NapiHelper {
 
+template <typename T, typename Enabled = void>
+struct ValueTransformer {
+  static std::optional<T> FromJS(Napi::Value);
+
+  static Napi::Value ToJS(Napi::Env, const T &);
+};
+
+struct Convert {
+  template <typename T>
+  static std::optional<T> FromJS(Napi::Value v);
+
+  template <typename T>
+  static Napi::Value ToJS(Napi::Env env, const T &v);
+};
+
 struct Undefined {};
 struct Null {};
 
@@ -64,9 +79,9 @@ class Function {
 };
 
 template <typename T>
-class ObjectWrap : public Napi::ObjectWrap<ObjectWrap<T>> {
+class ScriptWrappable : public Napi::ObjectWrap<ScriptWrappable<T>> {
  private:
-  using This = ObjectWrap<T>;
+  using This = ScriptWrappable<T>;
 
   std::unique_ptr<T> _wrapped;
 
@@ -84,7 +99,7 @@ class ObjectWrap : public Napi::ObjectWrap<ObjectWrap<T>> {
                                    const Napi::Value &);
 
  public:
-  ObjectWrap(const Napi::CallbackInfo &info);
+  ScriptWrappable(const Napi::CallbackInfo &info);
 
   T &wrapped() const;
 
