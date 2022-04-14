@@ -10,7 +10,7 @@ CustomStruct CustomMethod(CustomStruct input) {
   return CustomStruct{
       input.str + " world",
       input.num.has_value() ? std::optional<uint32_t>(*input.num + 1)
-                            : std::optional<uint32_t>({}),
+                            : std::nullopt,
   };
 }
 }  // namespace
@@ -32,7 +32,7 @@ struct ValueTransformer<CustomStruct> {
   }
   static Napi::Value ToJS(Napi::Env env, const CustomStruct &v) {
     Napi::Object obj = Napi::Object::New(env);
-    if (v.num) {
+    if (v.num.has_value()) {
       obj.Set("num", ValueTransformer<uint32_t>::ToJS(env, *v.num));
     }
     obj.Set("str", ValueTransformer<std::string>::ToJS(env, v.str));
