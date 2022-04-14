@@ -1,10 +1,9 @@
 #ifndef SRC_NAPI_HELPER_INL_H_
 #define SRC_NAPI_HELPER_INL_H_
 
-#include <optional>
-#include <string>
 #include <string_view>
 #include <tuple>
+#include <type_traits>
 #include <variant>
 
 namespace NapiHelper {

@@ -3,6 +3,10 @@
 
 #include <napi.h>
 
+#include <memory>
+#include <optional>
+#include <string>
+
 #if !defined(NAPI_HELPER_TAG_OBJECT_WRAP) && \
     !defined(NAPI_HELPER_DISABLE_TAG_OBJECT_WRAP)
 #if NAPI_VERSION >= 8
