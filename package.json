@@ -1,6 +1,6 @@
 {
   "name": "node-addon-api-helper",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Simplify node-addon-api native binding development with C++ meta programming",
   "main": "index.js",
   "scripts": {

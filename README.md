@@ -1,4 +1,4 @@
-# node-addon-api-helper
+# node-addon-api-helper<!-- omit in toc -->
 
 [![NPM](https://img.shields.io/npm/v/node-addon-api-helper)](https://www.npmjs.com/package/node-addon-api-helper)
 [![CI](https://github.com/ajihyf/node-addon-api-helper/workflows/ci/badge.svg)](https://github.com/ajihyf/node-addon-api-helper/actions/workflows/ci.yml)
@@ -7,12 +7,10 @@
 
 **node-addon-api-helper** provides a more convenient way to write Node.js C++ addons.
 
-# Table of contents
+# Table of contents<!-- omit in toc -->
 
 - [Installation](#installation)
 - [Usage](#usage)
-  - [ValueTransformer](#valuetransformer)
-    - [Custom Type](#customtype)
   - [Function](#function)
     - [Optional Arguments](#optional-arguments)
     - [Union Types](#union-types)
@@ -20,6 +18,8 @@
     - [Inject CallbackInfo](#inject-callbackinfo)
   - [ScriptWrappable](#scriptwrappable)
     - [ScriptWrappable as Argument](#scriptwrappable-as-argument)
+  - [ValueTransformer](#valuetransformer)
+    - [Custom Type](#custom-type)
   - [Error Handling](#error-handling)
     - [With C++ Exception](#with-c-exception)
     - [Without C++ Exception](#without-c-exception)
@@ -313,7 +313,7 @@ std::optional<uint32_t> TestNum(const Napi::CallbackInfo &info, uint32_t num) {
 }
 ```
 
-## Thanks
+# Thanks
 
 - [node-addon-api](https://github.com/nodejs/node-addon-api)
 - [napi-rs](https://napi.rs)
