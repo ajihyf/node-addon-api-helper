@@ -3,8 +3,6 @@
 namespace {
 class TestObject {
  public:
-  using Wrapped = NapiHelper::ScriptWrappable<TestObject>;
-
   TestObject(uint32_t num) : _num(num) {}
 
   uint32_t Multiply(uint32_t num) { return _num * num; }
@@ -13,7 +11,7 @@ class TestObject {
 
   void set_num(uint32_t num) { _num = num; }
 
-  uint32_t num() { return _num; }
+  uint32_t num() const { return _num; }
 
   uint32_t GetArgLength(const Napi::CallbackInfo& info) {
     return info.Length();
@@ -26,6 +24,8 @@ class TestObject {
   static void set_count(uint32_t n) { _count = n; };
 
   static Napi::Function DefineClass(Napi::Env env) {
+    using Wrapped = NapiHelper::ScriptWrappable<TestObject>;
+
     Napi::Symbol sym = Napi::Symbol::New(env, "sym");
     return Wrapped::DefineClass<uint32_t>(
         env, "TestObject",
@@ -54,19 +54,20 @@ uint32_t TestObject::_count = 0;
 
 class AnotherTestObject {
  public:
-  using Wrapped = NapiHelper::ScriptWrappable<AnotherTestObject>;
-
   AnotherTestObject(const Napi::CallbackInfo&) {}
 
-  TestObject::Wrapped* AddTest(TestObject::Wrapped* obj, uint32_t num) {
-    obj->wrapped().Add(num);
-    return obj;
-  }
+  void AddTest(TestObject* obj, uint32_t num) { obj->Add(num); }
+
+  uint32_t GetTestNum(const TestObject* obj) { return obj->num(); }
 
   static Napi::Function DefineClass(Napi::Env env) {
+    using Wrapped = NapiHelper::ScriptWrappable<AnotherTestObject>;
+
     return Wrapped::DefineClass<const Napi::CallbackInfo&>(
         env, "AnotherTestObject",
-        {Wrapped::InstanceMethod<&AnotherTestObject::AddTest>("addTest")});
+        {Wrapped::InstanceMethod<&AnotherTestObject::AddTest>("addTest"),
+         Wrapped::InstanceMethod<&AnotherTestObject::GetTestNum>(
+             "getTestNum")});
   }
 };
 }  // namespace

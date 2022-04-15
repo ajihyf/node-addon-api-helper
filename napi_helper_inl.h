@@ -112,91 +112,6 @@ class ArgsConverter<std::tuple<Head, Rest...>> {
   }
 };
 
-class Invoker {
- private:
-  template <typename Callable>
-  static auto CallInternal(const Napi::CallbackInfo &info, Callable &&fn) {
-    using Signature =
-        get_signature<std::remove_cv_t<std::remove_reference_t<Callable>>>;
-    using OriginArgs = typename Signature::args;
-
-    constexpr bool head_is_cb_info =
-        std::is_same_v<typename get_tuple_elements<OriginArgs>::head,
-                       const Napi::CallbackInfo &>;
-
-    using Args = typename std::conditional_t<
-        head_is_cb_info, typename get_tuple_elements<OriginArgs>::rest,
-        OriginArgs>;
-
-    std::optional<Args> args = ArgsConverter<Args>::Get(info, 0);
-    if (!args.has_value()) {
-      NAPI_THROW(Napi::TypeError::New(info.Env(), "bad arguments"),
-                 typename Signature::ret());
-    }
-
-    if constexpr (head_is_cb_info) {
-      return std::apply(
-          std::forward<Callable>(fn),
-          std::tuple_cat(std::make_tuple(std::cref(info)), std::move(*args)));
-    } else {
-      return std::apply(std::forward<Callable>(fn), std::move(*args));
-    }
-  }
-
- public:
-  template <typename Callable>
-  static auto Call(const Napi::CallbackInfo &info, Callable &&fn) {
-#ifdef NAPI_CPP_EXCEPTIONS
-    try {
-      return CallInternal(info, std::forward<Callable>(fn));
-    } catch (const RangeError &err) {
-      throw Napi::RangeError::New(info.Env(), err.Message());
-    } catch (const TypeError &err) {
-      throw Napi::TypeError::New(info.Env(), err.Message());
-    } catch (const Error &err) {
-      throw Napi::Error::New(info.Env(), err.Message());
-    }
-#else
-    return CallInternal(info, std::forward<Callable>(fn));
-#endif
-  }
-
-  template <typename Callable>
-  static auto CallJS(const Napi::CallbackInfo &info, Callable &&fn) {
-    using Signature =
-        get_signature<std::remove_cv_t<std::remove_reference_t<Callable>>>;
-    using Ret = typename Signature::ret;
-
-    if constexpr (std::is_void_v<Ret>) {
-      return Call(info, std::forward<Callable>(fn));
-    } else {
-      Ret result = Call(info, std::forward<Callable>(fn));
-      return ValueTransformer<Ret>::ToJS(info.Env(), result);
-    }
-  }
-
-  template <auto fn>
-  static auto FunctionCallback(const Napi::CallbackInfo &info) {
-    return CallJS(info, fn);
-  }
-
-  template <typename T>
-  using ConstructFn = std::unique_ptr<T> (*)(const Napi::CallbackInfo &);
-
-  template <typename T, typename... CtorArgs>
-  static std::unique_ptr<T> Construct(const Napi::CallbackInfo &info) {
-    return details::Invoker::Call(
-        info, [](CtorArgs... args) -> std::unique_ptr<T> {
-          return std::make_unique<T>(std::move(args)...);
-        });
-  }
-
-  template <class T, typename Ret, typename... Args>
-  static auto InstanceCall(T *c, Ret (T::*m)(Args...)) {
-    return [=](Args... args) -> Ret { return (c->*m)(std::move(args)...); };
-  }
-};
-
 }  // namespace details
 
 template <>
@@ -568,6 +483,13 @@ struct ValueTransformer<std::variant<Args...>> {
   }
 };
 
+template <typename Ret, typename... Args>
+struct ValueTransformer<std::function<Ret(Args...)>> {
+  static Napi::Value ToJS(Napi::Env env, const std::function<Ret(Args...)> &v) {
+    return Function::New(env, std::move(v));
+  }
+};
+
 template <typename... Args>
 struct ValueTransformer<std::tuple<Args...>> {
  private:
@@ -637,27 +559,21 @@ struct ValueTransformer<std::vector<T>> {
 #ifdef NAPI_HELPER_TAG_OBJECT_WRAP
 
 template <typename T>
-struct ValueTransformer<ScriptWrappable<T> *> {
- private:
-  using Type = ScriptWrappable<T> *;
-
+struct ValueTransformer<T *, std::enable_if_t<std::is_class_v<T>>> {
  public:
-  static std::optional<Type> FromJS(Napi::Value value) {
+  static std::optional<T *> FromJS(Napi::Value value) {
+    using Wrapped = ScriptWrappable<std::remove_const_t<T>>;
     if (!value.IsObject()) {
       return {};
     }
     Napi::Object obj = value.As<Napi::Object>();
     bool check_tag = false;
-    napi_check_object_type_tag(value.Env(), obj, ScriptWrappable<T>::type_tag(),
+    napi_check_object_type_tag(value.Env(), obj, Wrapped::type_tag(),
                                &check_tag);
     if (!check_tag) {
       return {};
     }
-    return ScriptWrappable<T>::Unwrap(obj);
-  }
-
-  static Napi::Value ToJS(Napi::Env, const Type &wrappable) {
-    return wrappable->Value();
+    return &(Wrapped::Unwrap(obj)->wrapped());
   }
 };
 
@@ -687,6 +603,95 @@ inline const char *Error::what() const NAPI_NOEXCEPT {
 }
 
 #endif  // NAPI_CPP_EXCEPTIONS
+
+namespace details {
+class Invoker {
+ private:
+  template <typename Callable>
+  static auto CallInternal(const Napi::CallbackInfo &info, Callable &&fn) {
+    using Signature = get_signature<std::decay_t<Callable>>;
+    using OriginArgs = typename Signature::args;
+
+    constexpr bool head_is_cb_info =
+        std::is_same_v<typename get_tuple_elements<OriginArgs>::head,
+                       const Napi::CallbackInfo &>;
+
+    using Args = typename std::conditional_t<
+        head_is_cb_info, typename get_tuple_elements<OriginArgs>::rest,
+        OriginArgs>;
+
+    std::optional<Args> args = ArgsConverter<Args>::Get(info, 0);
+    if (!args.has_value()) {
+      NAPI_THROW(Napi::TypeError::New(info.Env(), "bad arguments"),
+                 typename Signature::ret());
+    }
+
+    if constexpr (head_is_cb_info) {
+      return std::apply(
+          std::forward<Callable>(fn),
+          std::tuple_cat(std::make_tuple(std::cref(info)), std::move(*args)));
+    } else {
+      return std::apply(std::forward<Callable>(fn), std::move(*args));
+    }
+  }
+
+ public:
+  template <typename Callable>
+  static auto Call(const Napi::CallbackInfo &info, Callable &&fn) {
+#ifdef NAPI_CPP_EXCEPTIONS
+    try {
+      return CallInternal(info, std::forward<Callable>(fn));
+    } catch (const RangeError &err) {
+      throw RangeError::JSError::New(info.Env(), err.Message());
+    } catch (const TypeError &err) {
+      throw TypeError::JSError::New(info.Env(), err.Message());
+    } catch (const Error &err) {
+      throw Error::JSError::New(info.Env(), err.Message());
+    }
+#else
+    return CallInternal(info, std::forward<Callable>(fn));
+#endif
+  }
+
+  template <typename Callable>
+  static auto CallJS(const Napi::CallbackInfo &info, Callable &&fn) {
+    using Signature = get_signature<std::decay_t<Callable>>;
+    using Ret = typename Signature::ret;
+
+    if constexpr (std::is_void_v<Ret>) {
+      return Call(info, std::forward<Callable>(fn));
+    } else {
+      Ret result = Call(info, std::forward<Callable>(fn));
+      return ValueTransformer<Ret>::ToJS(info.Env(), result);
+    }
+  }
+
+  template <auto fn>
+  static auto FunctionCallback(const Napi::CallbackInfo &info) {
+    return CallJS(info, fn);
+  }
+
+  template <typename T>
+  using ConstructFn = std::unique_ptr<T> (*)(const Napi::CallbackInfo &);
+
+  template <typename T, typename... CtorArgs>
+  static std::unique_ptr<T> Construct(const Napi::CallbackInfo &info) {
+    return Call(info, [](CtorArgs... args) -> std::unique_ptr<T> {
+      return std::unique_ptr<T>(new T(std::move(args)...));
+    });
+  }
+
+  template <class T, typename Ret, typename... Args>
+  static auto InstanceCall(T *c, Ret (T::*m)(Args...)) {
+    return [=](Args... args) -> Ret { return (c->*m)(std::move(args)...); };
+  }
+
+  template <class T, typename Ret, typename... Args>
+  static auto InstanceCall(T *c, Ret (T::*m)(Args...) const) {
+    return [=](Args... args) -> Ret { return (c->*m)(std::move(args)...); };
+  }
+};
+}  // namespace details
 
 template <auto fn>
 inline Napi::Function Function::New(Napi::Env env, const char *utf8name,
@@ -919,6 +924,9 @@ ScriptWrappable<T>::StaticAccessor(Napi::Symbol name,
 
 template <typename T>
 inline const napi_type_tag *ScriptWrappable<T>::type_tag() {
+  static_assert(std::is_class_v<T>, "T must be class");
+  static_assert(!std::is_const_v<T>,
+                "T must be non const class");  // make sure no `const T` exists
   static const napi_type_tag tag = {reinterpret_cast<uintptr_t>(&tag),
                                     reinterpret_cast<uintptr_t>(&tag)};
   return &tag;
@@ -926,6 +934,153 @@ inline const napi_type_tag *ScriptWrappable<T>::type_tag() {
 
 #endif
 
+namespace details {
+struct RegistrationEntry {
+  const char *name;
+  std::function<Napi::Value(Napi::Env, const char *)> init_cb;
+
+  static std::vector<RegistrationEntry> &Entries() {
+    static std::vector<RegistrationEntry> entries;
+    return entries;
+  }
+};
+
+template <typename T>
+class ClassRegistrationEntry {
+ private:
+  static std::vector<typename ScriptWrappable<T>::PropertyDescriptor>
+      &descriptors() {
+    static std::vector<typename ScriptWrappable<T>::PropertyDescriptor>
+        descriptors_;
+    return descriptors_;
+  }
+
+  template <typename... CtorArgs>
+  static Napi::Value DefineClassCallback(Napi::Env env, const char *name) {
+    return ScriptWrappable<T>::template DefineClass<CtorArgs...>(env, name,
+                                                                 descriptors());
+  }
+
+ public:
+  template <typename... CtorArgs>
+  static void DefineClass(const char *name) {
+    RegistrationEntry::Entries().push_back(
+        RegistrationEntry{name, DefineClassCallback<CtorArgs...>});
+  }
+
+  static void AddPropertyDescriptor(
+      typename ScriptWrappable<T>::PropertyDescriptor descriptor) {
+    descriptors().push_back(std::move(descriptor));
+  }
+};
+}  // namespace details
+
+inline Napi::Object Registration::ModuleCallback(Napi::Env env,
+                                                 Napi::Object exports) {
+  for (auto &it : details::RegistrationEntry::Entries()) {
+    exports.Set(it.name, it.init_cb(env, it.name));
+  }
+  return exports;
+}
+
+template <typename T>
+inline void Registration::Value(const char *name, const T &val) {
+  details::RegistrationEntry::Entries().push_back(
+      {name, [val](Napi::Env env, const char *) {
+         return ValueTransformer<T>::ToJS(env, val);
+       }});
+}
+
+template <auto fn>
+inline void Registration::Function(const char *name, void *data) {
+  details::RegistrationEntry::Entries().push_back(
+      {name, [data](Napi::Env env, const char *name) {
+         return Function::New<fn>(env, name, data);
+       }});
+}
+
+template <typename Callable>
+inline void Registration::Function(const char *name, Callable callable,
+                                   void *data) {
+  details::RegistrationEntry::Entries().push_back(
+      {name,
+       [callable = std::move(callable), data](Napi::Env env, const char *name) {
+         return Function::New(env, callable, name, data);
+       }});
+}
+
+template <typename T, typename... CtorArgs>
+inline ClassRegistration<T> Registration::Class(const char *name) {
+  details::ClassRegistrationEntry<T>::template DefineClass<CtorArgs...>(name);
+  return ClassRegistration<T>();
+}
+
+template <typename T>
+template <auto T::*fn>
+inline ClassRegistration<T> &ClassRegistration<T>::InstanceMethod(
+    const char *name, napi_property_attributes attributes, void *data) {
+  details::ClassRegistrationEntry<T>::AddPropertyDescriptor(
+      ScriptWrappable<T>::template InstanceMethod<fn>(name, attributes, data));
+  return *this;
+}
+
+template <typename T>
+template <auto T::*getter>
+inline ClassRegistration<T> &ClassRegistration<T>::InstanceAccessor(
+    const char *name, napi_property_attributes attributes, void *data) {
+  details::ClassRegistrationEntry<T>::AddPropertyDescriptor(
+      ScriptWrappable<T>::template InstanceAccessor<getter>(name, attributes,
+                                                            data));
+  return *this;
+}
+
+template <typename T>
+template <auto T::*getter, auto T::*setter>
+inline ClassRegistration<T> &ClassRegistration<T>::InstanceAccessor(
+    const char *name, napi_property_attributes attributes, void *data) {
+  details::ClassRegistrationEntry<T>::AddPropertyDescriptor(
+      ScriptWrappable<T>::template InstanceAccessor<getter, setter>(
+          name, attributes, data));
+  return *this;
+}
+
+template <typename T>
+template <auto fn>
+inline ClassRegistration<T> &ClassRegistration<T>::StaticMethod(
+    const char *name, napi_property_attributes attributes, void *data) {
+  details::ClassRegistrationEntry<T>::AddPropertyDescriptor(
+      ScriptWrappable<T>::template StaticMethod<fn>(name, attributes, data));
+  return *this;
+}
+
+template <typename T>
+template <auto getter>
+inline ClassRegistration<T> &ClassRegistration<T>::StaticAccessor(
+    const char *name, napi_property_attributes attributes, void *data) {
+  details::ClassRegistrationEntry<T>::AddPropertyDescriptor(
+      ScriptWrappable<T>::template StaticAccessor<getter>(name, attributes,
+                                                          data));
+  return *this;
+}
+
+template <typename T>
+template <auto getter, auto setter>
+inline ClassRegistration<T> &ClassRegistration<T>::StaticAccessor(
+    const char *name, napi_property_attributes attributes, void *data) {
+  details::ClassRegistrationEntry<T>::AddPropertyDescriptor(
+      ScriptWrappable<T>::template StaticAccessor<getter, setter>(
+          name, attributes, data));
+  return *this;
+}
+
 }  // namespace NapiHelper
+
+#define NAPI_HELPER_EXPORT                                          \
+  static Napi::ModuleRegisterCallback NAPI_HELPER_MODULE_CALLBACK = \
+      NapiHelper::Registration::ModuleCallback;                     \
+  NODE_API_MODULE(NODE_GYP_MODULE_NAME, NAPI_HELPER_MODULE_CALLBACK)
+
+#define NAPI_HELPER_REGISTRATION \
+  NAPI_C_CTOR(napi_helper_auto_register_function_)
 
 #endif  // SRC_NAPI_HELPER_INL_H_

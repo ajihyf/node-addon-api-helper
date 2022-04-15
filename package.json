@@ -34,7 +34,7 @@
     "node-addon-api": "^4.0.0"
   },
   "files": [
-    "*.{c,h,gyp,gypi}"
+    "*.{h,gyp,gypi}"
   ],
   "gypfile": false,
   "homepage": "https://github.com/ajihyf/node-addon-api-helper",

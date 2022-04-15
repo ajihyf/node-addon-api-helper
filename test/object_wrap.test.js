@@ -61,7 +61,8 @@ describe('ObjectWrap', () => {
     const o3 = new scriptWrappable.AnotherTestObject()
     expect(() => o2.addTest({})).to.throw(TypeError)
     expect(() => o2.addTest(o3)).to.throw(TypeError)
-    expect(o2.addTest(o1, 42).num).to.eq(233 + 42)
+    o2.addTest(o1, 42)
+    expect(o2.getTestNum(o1)).to.eq(233 + 42)
   })
 
   it('can not set readonly field', () => {

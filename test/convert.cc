@@ -13,6 +13,10 @@ CustomStruct CustomMethod(CustomStruct input) {
                             : std::nullopt,
   };
 }
+
+auto CallbackMethod(uint32_t num) {
+  return std::function([num](uint32_t n) -> uint32_t { return num + n; });
+}
 }  // namespace
 
 namespace NapiHelper {
@@ -55,5 +59,8 @@ Napi::Object InitConvert(Napi::Env env) {
       NapiHelper::Convert::ToJS(env, std::u16string_view(u"u16stringView"));
 
   obj["customMethod"] = NapiHelper::Function::New<CustomMethod>(env);
+
+  obj["callbackMethod"] = NapiHelper::Function::New<CallbackMethod>(env);
+
   return obj;
 }

@@ -1,70 +1,14 @@
-#ifndef SRC_NAPI_HELPER_H_
-#define SRC_NAPI_HELPER_H_
+# Mix with node-addon-api
 
-#include <napi.h>
+`node-addon-api-helper` is based on node-addon-api by its name. All Napi values are supported as function arguments and return value.
 
-#include <memory>
-#include <optional>
-#include <string>
+## Function
 
-#if !defined(NAPI_HELPER_TAG_OBJECT_WRAP) && \
-    !defined(NAPI_HELPER_DISABLE_TAG_OBJECT_WRAP)
-#if NAPI_VERSION >= 8
-#define NAPI_HELPER_TAG_OBJECT_WRAP
-#endif
-#endif
+`NapiHelper::Function` helps you to create `Napi::Function` with pure C++ function signature.
 
-namespace NapiHelper {
+`NapiHelper::Function::New` behaves like `Napi::Function::New` and returns a `Napi::Function` instance.
 
-template <typename T, typename Enabled = void>
-struct ValueTransformer {
-  static std::optional<T> FromJS(Napi::Value);
-
-  static Napi::Value ToJS(Napi::Env, const T &);
-};
-
-struct Convert {
-  template <typename T>
-  static std::optional<T> FromJS(Napi::Value v);
-
-  template <typename T>
-  static Napi::Value ToJS(Napi::Env env, const T &v);
-};
-
-struct Undefined {};
-struct Null {};
-
-class Error :
-#ifdef NAPI_CPP_EXCEPTIONS
-    public std::exception
-#endif  // NAPI_CPP_EXCEPTIONS
-{
- public:
-  using JSError = Napi::Error;
-  explicit Error(const char *msg);
-  explicit Error(const std::string &msg);
-#ifdef NAPI_CPP_EXCEPTIONS
-  const char *what() const NAPI_NOEXCEPT override;
-#endif  // NAPI_CPP_EXCEPTIONS
-
-  const std::string &Message() const NAPI_NOEXCEPT;
-
- private:
-  std::string _message;
-};
-
-class RangeError : public Error {
- public:
-  using JSError = Napi::RangeError;
-  using Error::Error;
-};
-
-class TypeError : public Error {
- public:
-  using JSError = Napi::TypeError;
-  using Error::Error;
-};
-
+```cpp
 class Function {
  public:
   template <auto fn>
@@ -84,7 +28,13 @@ class Function {
   static Napi::Function New(Napi::Env env, Callable fn,
                             const std::string &utf8name, void *data = nullptr);
 };
+```
 
+## ScriptWrappable
+
+`NapiHelper::ScriptWrappable` is a replacement of `Napi::ObjectWrap` which provides a way to bind native class to JavaScript object.
+
+```cpp
 template <typename T>
 class ScriptWrappable : public Napi::ObjectWrap<ScriptWrappable<T>> {
  private:
@@ -187,41 +137,13 @@ class ScriptWrappable : public Napi::ObjectWrap<ScriptWrappable<T>> {
   static const napi_type_tag *type_tag();
 #endif
 };
+```
 
-template <typename T>
-class ClassRegistration {
- public:
-  template <auto T::*fn>
-  ClassRegistration<T> &InstanceMethod(
-      const char *name, napi_property_attributes attributes = napi_default,
-      void *data = nullptr);
+## Registration
 
-  template <auto T::*getter>
-  ClassRegistration<T> &InstanceAccessor(
-      const char *name, napi_property_attributes attributes = napi_default,
-      void *data = nullptr);
+`Registration` is the class to store values exported by `NAPI_HELPER_REGISTRATION`.
 
-  template <auto T::*getter, auto T::*setter>
-  ClassRegistration<T> &InstanceAccessor(
-      const char *name, napi_property_attributes attributes = napi_default,
-      void *data = nullptr);
-
-  template <auto fn>
-  ClassRegistration<T> &StaticMethod(
-      const char *name, napi_property_attributes attributes = napi_default,
-      void *data = nullptr);
-
-  template <auto getter>
-  ClassRegistration<T> &StaticAccessor(
-      const char *name, napi_property_attributes attributes = napi_default,
-      void *data = nullptr);
-
-  template <auto getter, auto setter>
-  ClassRegistration<T> &StaticAccessor(
-      const char *name, napi_property_attributes attributes = napi_default,
-      void *data = nullptr);
-};
-
+```cpp
 class Registration {
  public:
   template <typename T>
@@ -239,9 +161,6 @@ class Registration {
 
   static Napi::Object ModuleCallback(Napi::Env, Napi::Object);
 };
+```
 
-}  // namespace NapiHelper
-
-#include "napi_helper_inl.h"
-
-#endif  // SRC_NAPI_HELPER_H_
+If you are not using `NAPI_HELPER_EXPORT` macro to export module. You can use `Registration::ModuleCallback` to get the stored values.

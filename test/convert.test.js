@@ -9,6 +9,11 @@ describe('Convert', () => {
     expect(convert.u16stringView).to.eq('u16stringView')
   })
 
+  it('convert function', () => {
+    expect(convert.callbackMethod(1)(1)).to.eq(2)
+    expect(convert.callbackMethod(2)(2)).to.eq(4)
+  })
+
   it('convert custom value', () => {
     expect(convert.customMethod({ str: 'hello' })).to.eql({
       str: 'hello world'
