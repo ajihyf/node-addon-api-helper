@@ -122,9 +122,7 @@ struct ValueTransformer<Undefined> {
     }
     return Undefined{};
   }
-  static Napi::Value ToJS(Napi::Env env, const Undefined &) {
-    return env.Undefined();
-  }
+  static Napi::Value ToJS(Napi::Env env, Undefined) { return env.Undefined(); }
 };
 
 template <>
@@ -135,13 +133,13 @@ struct ValueTransformer<Null> {
     }
     return Null{};
   }
-  static Napi::Value ToJS(Napi::Env env, const Null &) { return env.Null(); }
+  static Napi::Value ToJS(Napi::Env env, Null) { return env.Null(); }
 };
 
 template <>
 struct ValueTransformer<Napi::Value> {
   static std::optional<Napi::Value> FromJS(Napi::Value v) { return v; }
-  static Napi::Value ToJS(Napi::Env, const Napi::Value &val) { return val; }
+  static Napi::Value ToJS(Napi::Env, Napi::Value val) { return val; }
 };
 
 template <typename T, bool (Napi::Value::*IsT)() const>
@@ -153,7 +151,7 @@ struct JSValueTransformer {
     return value.As<T>();
   }
 
-  static Napi::Value ToJS(Napi::Env, const T &val) { return val; }
+  static Napi::Value ToJS(Napi::Env, T val) { return val; }
 };
 
 template <>
@@ -235,7 +233,7 @@ struct TypedArrayTransformer {
     return value.As<T>();
   }
 
-  static Napi::Value ToJS(Napi::Env, const T &val) { return val; }
+  static Napi::Value ToJS(Napi::Env, T val) { return val; }
 };
 
 template <>
@@ -290,7 +288,7 @@ struct ValueTransformer<bool> {
     return value.As<Napi::Boolean>().Value();
   }
 
-  static Napi::Value ToJS(Napi::Env env, const bool &num) {
+  static Napi::Value ToJS(Napi::Env env, bool num) {
     return Napi::Boolean::New(env, num);
   }
 };
@@ -304,7 +302,7 @@ struct ValueTransformer<double> {
     return value.As<Napi::Number>().DoubleValue();
   }
 
-  static Napi::Value ToJS(Napi::Env env, const double &num) {
+  static Napi::Value ToJS(Napi::Env env, double num) {
     return Napi::Number::New(env, num);
   }
 };
@@ -318,7 +316,7 @@ struct ValueTransformer<float> {
     return value.As<Napi::Number>().FloatValue();
   }
 
-  static Napi::Value ToJS(Napi::Env env, const float &num) {
+  static Napi::Value ToJS(Napi::Env env, float num) {
     return Napi::Number::New(env, num);
   }
 };
@@ -335,7 +333,7 @@ struct ValueTransformer<Uint,
     return value.As<Napi::Number>().Uint32Value();
   }
 
-  static Napi::Value ToJS(Napi::Env env, const Uint &num) {
+  static Napi::Value ToJS(Napi::Env env, Uint num) {
     return Napi::Number::New(env, num);
   }
 };
@@ -351,7 +349,7 @@ struct ValueTransformer<Int, std::enable_if_t<std::is_same_v<Int, int8_t> ||
     return value.As<Napi::Number>().Int32Value();
   }
 
-  static Napi::Value ToJS(Napi::Env env, const Int &num) {
+  static Napi::Value ToJS(Napi::Env env, Int num) {
     return Napi::Number::New(env, num);
   }
 };
@@ -367,7 +365,7 @@ struct ValueTransformer<int64_t> {
     return value.As<Napi::BigInt>().Int64Value(&lossless);
   }
 
-  static Napi::Value ToJS(Napi::Env env, const int64_t &num) {
+  static Napi::Value ToJS(Napi::Env env, int64_t num) {
     return Napi::BigInt::New(env, num);
   }
 };
@@ -382,7 +380,7 @@ struct ValueTransformer<uint64_t> {
     return value.As<Napi::BigInt>().Uint64Value(&lossless);
   }
 
-  static Napi::Value ToJS(Napi::Env env, const uint64_t &num) {
+  static Napi::Value ToJS(Napi::Env env, uint64_t num) {
     return Napi::BigInt::New(env, num);
   }
 };
@@ -392,21 +390,21 @@ template <typename T>
 struct ValueTransformer<
     T, std::enable_if_t<std::is_convertible_v<T, const char *>>> {
  public:
-  static Napi::Value ToJS(Napi::Env env, const T &str) {
+  static Napi::Value ToJS(Napi::Env env, T str) {
     return Napi::String::New(env, str);
   }
 };
 
 template <>
 struct ValueTransformer<std::string_view> {
-  static Napi::Value ToJS(Napi::Env env, const std::string_view &str) {
+  static Napi::Value ToJS(Napi::Env env, std::string_view str) {
     return Napi::String::New(env, str.data(), str.size());
   }
 };
 
 template <>
 struct ValueTransformer<std::u16string_view> {
-  static Napi::Value ToJS(Napi::Env env, const std::u16string_view &str) {
+  static Napi::Value ToJS(Napi::Env env, std::u16string_view str) {
     return Napi::String::New(env, str.data(), str.size());
   }
 };
@@ -420,7 +418,7 @@ struct ValueTransformer<std::string> {
     return value.As<Napi::String>().Utf8Value();
   }
 
-  static Napi::Value ToJS(Napi::Env env, const std::string &str) {
+  static Napi::Value ToJS(Napi::Env env, std::string str) {
     return Napi::String::New(env, str);
   }
 };
@@ -434,16 +432,16 @@ struct ValueTransformer<std::u16string> {
     return value.As<Napi::String>().Utf16Value();
   }
 
-  static Napi::Value ToJS(Napi::Env env, const std::u16string &str) {
+  static Napi::Value ToJS(Napi::Env env, std::u16string str) {
     return Napi::String::New(env, str);
   }
 };
 
 template <typename T>
 struct ValueTransformer<std::optional<T>> {
-  static Napi::Value ToJS(Napi::Env env, const std::optional<T> &val) {
+  static Napi::Value ToJS(Napi::Env env, std::optional<T> val) {
     if (val.has_value()) {
-      return ValueTransformer<T>::ToJS(env, *val);
+      return ValueTransformer<T>::ToJS(env, std::move(*val));
     }
     return env.Undefined();
   }
@@ -473,19 +471,23 @@ struct ValueTransformer<std::variant<Args...>> {
     return FromJS<0>(value);
   }
 
-  static Napi::Value ToJS(Napi::Env env, const Variants &v) {
+  static Napi::Value ToJS(Napi::Env env, Variants v) {
     return std::visit(
         [&](auto &&arg) -> Napi::Value {
           using T = std::decay_t<decltype(arg)>;
-          return ValueTransformer<T>::ToJS(env, arg);
+          return ValueTransformer<T>::ToJS(env, std::move(arg));
         },
         v);
   }
 };
 
-template <typename Ret, typename... Args>
-struct ValueTransformer<std::function<Ret(Args...)>> {
-  static Napi::Value ToJS(Napi::Env env, const std::function<Ret(Args...)> &v) {
+template <typename Callable>
+struct ValueTransformer<
+    Callable,
+    std::enable_if_t<
+        std::is_function_v<std::remove_pointer_t<Callable>> ||
+        std::is_member_function_pointer_v<decltype(&Callable::operator())>>> {
+  static Napi::Value ToJS(Napi::Env env, Callable v) {
     return Function::New(env, std::move(v));
   }
 };
@@ -496,11 +498,11 @@ struct ValueTransformer<std::tuple<Args...>> {
   using Tuple = std::tuple<Args...>;
 
   template <size_t... Is>
-  static void SetArrayElement(Napi::Env env, Napi::Array &arr, const Tuple &t,
+  static void SetArrayElement(Napi::Env env, Napi::Array &arr, Tuple t,
                               std::index_sequence<Is...>) {
     (arr.Set(static_cast<uint32_t>(Is),
              ValueTransformer<std::tuple_element_t<Is, Tuple>>::ToJS(
-                 env, std::get<Is>(t))),
+                 env, std::move(std::get<Is>(t)))),
      ...);
   }
 
@@ -512,14 +514,15 @@ struct ValueTransformer<std::tuple<Args...>> {
     return details::ArgsConverter<Tuple>::Get(value.As<Napi::Array>(), 0);
   }
 
-  static Napi::Value ToJS(Napi::Env env, const Tuple &t) {
+  static Napi::Value ToJS(Napi::Env env, Tuple t) {
     return std::apply(
         [&](auto &&...elements) -> Napi::Array {
           constexpr size_t size = sizeof...(elements);
 
           Napi::Array result = Napi::Array::New(env, size);
 
-          SetArrayElement(env, result, t, std::make_index_sequence<size>());
+          SetArrayElement(env, result, std::move(t),
+                          std::make_index_sequence<size>());
 
           return result;
         },
@@ -547,10 +550,10 @@ struct ValueTransformer<std::vector<T>> {
     return std::move(result);
   }
 
-  static Napi::Value ToJS(Napi::Env env, const std::vector<T> &arr) {
+  static Napi::Value ToJS(Napi::Env env, std::vector<T> arr) {
     Napi::Array result = Napi::Array::New(env, arr.size());
     for (uint32_t i = 0; i < arr.size(); i++) {
-      result.Set(i, ValueTransformer<T>::ToJS(env, arr[i]));
+      result.Set(i, ValueTransformer<T>::ToJS(env, std::move(arr[i])));
     }
     return result;
   }
@@ -579,14 +582,23 @@ struct ValueTransformer<T *, std::enable_if_t<std::is_class_v<T>>> {
 
 #endif
 
+template <typename E>
+struct ValueTransformer<
+    E, std::enable_if_t<std::is_base_of_v<NapiHelper::Error, E>>> {
+ public:
+  static Napi::Value ToJS(Napi::Env env, E e) {
+    return E::JSError::New(env, e.Message()).Value();
+  }
+};
+
 template <typename T>
 inline std::optional<T> Convert::FromJS(Napi::Value v) {
   return ValueTransformer<T>::FromJS(v);
 }
 
 template <typename T>
-inline Napi::Value Convert::ToJS(Napi::Env env, const T &v) {
-  return ValueTransformer<T>::ToJS(env, v);
+inline Napi::Value Convert::ToJS(Napi::Env env, T v) {
+  return ValueTransformer<T>::ToJS(env, std::move(v));
 }
 
 inline Error::Error(const char *msg) : _message(msg) {}
@@ -662,7 +674,7 @@ class Invoker {
       return Call(info, std::forward<Callable>(fn));
     } else {
       Ret result = Call(info, std::forward<Callable>(fn));
-      return ValueTransformer<Ret>::ToJS(info.Env(), result);
+      return ValueTransformer<Ret>::ToJS(info.Env(), std::move(result));
     }
   }
 
@@ -984,10 +996,10 @@ inline Napi::Object Registration::ModuleCallback(Napi::Env env,
 }
 
 template <typename T>
-inline void Registration::Value(const char *name, const T &val) {
+inline void Registration::Value(const char *name, T val) {
   details::RegistrationEntry::Entries().push_back(
-      {name, [val](Napi::Env env, const char *) {
-         return ValueTransformer<T>::ToJS(env, val);
+      {name, [val = std::move(val)](Napi::Env env, const char *) {
+         return ValueTransformer<T>::ToJS(env, std::move(val));
        }});
 }
 

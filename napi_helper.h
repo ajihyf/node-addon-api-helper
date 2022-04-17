@@ -20,7 +20,7 @@ template <typename T, typename Enabled = void>
 struct ValueTransformer {
   static std::optional<T> FromJS(Napi::Value);
 
-  static Napi::Value ToJS(Napi::Env, const T &);
+  static Napi::Value ToJS(Napi::Env, T);
 };
 
 struct Convert {
@@ -28,7 +28,7 @@ struct Convert {
   static std::optional<T> FromJS(Napi::Value v);
 
   template <typename T>
-  static Napi::Value ToJS(Napi::Env env, const T &v);
+  static Napi::Value ToJS(Napi::Env env, T v);
 };
 
 struct Undefined {};
@@ -225,7 +225,7 @@ class ClassRegistration {
 class Registration {
  public:
   template <typename T>
-  static void Value(const char *name, const T &t);
+  static void Value(const char *name, T t);
 
   template <auto fn>
   static void Function(const char *name, void *data = nullptr);

@@ -67,13 +67,14 @@ Supported return types :
 | [u]int64_t                                          | BigInt                                    |
 | float, double                                       | number                                    |
 | std::string, std::u16string                         | string                                    |
-| std::function<R(Args...)>                           | (args: Args...) => R                      |
+| lambda or std::function of <R(Args...)>             | (args: Args...) => R                      |
 | const char\*, std::string_view, std::u16string_view | string                                    |
 | std::vector\<T>                                     | T[]                                       |
 | std::variant\<T1, T2, ...>                          | T1 \| T2 \| ...                           |
 | std::optional\<T>                                   | T \| undefined                            |
 | std::tuple\<T1, T2, ...>                            | [T1, T2, ...]                             |
 | Napi::{Object, Array, Function, TypedArray, etc.}   | Object, Array, Function, TypedArray, etc. |
+| NapiHelper::{Error, RangeError, TypeError}          | Error, RangeError, TypeError              |
 
 ## Inject CallbackInfo
 

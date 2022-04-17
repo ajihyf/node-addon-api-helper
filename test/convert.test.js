@@ -10,8 +10,14 @@ describe('Convert', () => {
   })
 
   it('convert function', () => {
-    expect(convert.callbackMethod(1)(1)).to.eq(2)
-    expect(convert.callbackMethod(2)(2)).to.eq(4)
+    expect(convert.fnLambda(2)(3)).to.eq(5)
+    expect(convert.fnFunction(4)(4)).to.eq(8)
+  })
+
+  it('convert error', () => {
+    expect(convert.errorFunction()).to.be.instanceOf(Error)
+    expect(convert.rangeErrorFunction()).to.be.instanceOf(RangeError)
+    expect(convert.typeErrorFunction()).to.be.instanceOf(TypeError)
   })
 
   it('convert custom value', () => {

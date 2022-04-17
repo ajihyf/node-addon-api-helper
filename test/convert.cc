@@ -14,8 +14,22 @@ CustomStruct CustomMethod(CustomStruct input) {
   };
 }
 
-auto CallbackMethod(uint32_t num) {
+auto FnLambda(uint32_t num) {
+  return [num = std::make_unique<uint32_t>(num)](uint32_t add) -> uint32_t {
+    return *num + add;
+  };
+}
+
+auto FnFunction(uint32_t num) {
   return std::function([num](uint32_t n) -> uint32_t { return num + n; });
+}
+
+NapiHelper::Error ErrorFunction() { return NapiHelper::Error("error"); }
+NapiHelper::RangeError RangeErrorFunction() {
+  return NapiHelper::RangeError("error");
+}
+NapiHelper::TypeError TypeErrorFunction() {
+  return NapiHelper::TypeError("error");
 }
 }  // namespace
 
@@ -60,7 +74,13 @@ Napi::Object InitConvert(Napi::Env env) {
 
   obj["customMethod"] = NapiHelper::Function::New<CustomMethod>(env);
 
-  obj["callbackMethod"] = NapiHelper::Function::New<CallbackMethod>(env);
+  obj["fnLambda"] = NapiHelper::Function::New<FnLambda>(env);
+  obj["fnFunction"] = NapiHelper::Function::New<FnFunction>(env);
+
+  obj["errorFunction"] = NapiHelper::Function::New<ErrorFunction>(env);
+  obj["rangeErrorFunction"] =
+      NapiHelper::Function::New<RangeErrorFunction>(env);
+  obj["typeErrorFunction"] = NapiHelper::Function::New<TypeErrorFunction>(env);
 
   return obj;
 }
