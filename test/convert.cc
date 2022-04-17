@@ -24,6 +24,10 @@ auto FnFunction(uint32_t num) {
   return std::function([num](uint32_t n) -> uint32_t { return num + n; });
 }
 
+auto FnVoidFunction(uint32_t) {
+  return std::function([](uint32_t) -> void {});
+}
+
 NapiHelper::Error ErrorFunction() { return NapiHelper::Error("error"); }
 NapiHelper::RangeError RangeErrorFunction() {
   return NapiHelper::RangeError("error");
@@ -81,6 +85,7 @@ Napi::Object InitConvert(Napi::Env env) {
   obj["rangeErrorFunction"] =
       NapiHelper::Function::New<RangeErrorFunction>(env);
   obj["typeErrorFunction"] = NapiHelper::Function::New<TypeErrorFunction>(env);
+  obj["fnVoidFunction"] = NapiHelper::Function::New<FnVoidFunction>(env);
 
   return obj;
 }

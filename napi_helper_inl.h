@@ -481,32 +481,26 @@ struct ValueTransformer<std::variant<Args...>> {
   }
 };
 
-template <typename Callable>
-struct ValueTransformer<
-    Callable,
-    std::enable_if_t<
-        std::is_function_v<std::remove_pointer_t<Callable>> ||
-        std::is_member_function_pointer_v<decltype(&Callable::operator())>>> {
-  static Napi::Value ToJS(Napi::Env env, Callable v) {
-    return Function::New(env, std::move(v));
-  }
-};
-
 template <typename... Args>
 struct ValueTransformer<std::tuple<Args...>> {
  private:
   using Tuple = std::tuple<Args...>;
 
   template <size_t... Is>
-  static void SetArrayElement(Napi::Env env, Napi::Array &arr, Tuple t,
-                              std::index_sequence<Is...>) {
-    (arr.Set(static_cast<uint32_t>(Is),
-             ValueTransformer<std::tuple_element_t<Is, Tuple>>::ToJS(
-                 env, std::move(std::get<Is>(t)))),
+  static std::vector<napi_value> ToVectorImpl(Napi::Env env, Tuple t,
+                                              std::index_sequence<Is...>) {
+    std::vector<napi_value> result(std::tuple_size_v<Tuple>);
+    ((result[Is] = ValueTransformer<std::tuple_element_t<Is, Tuple>>::ToJS(
+          env, std::move(std::get<Is>(t)))),
      ...);
+    return std::move(result);
   }
 
  public:
+  static std::vector<napi_value> ToVector(Napi::Env env, Tuple t) {
+    return ToVectorImpl(env, std::move(t), std::index_sequence_for<Args...>{});
+  }
+
   static std::optional<Tuple> FromJS(Napi::Value value) {
     if (!value.IsArray()) {
       return {};
@@ -521,8 +515,10 @@ struct ValueTransformer<std::tuple<Args...>> {
 
           Napi::Array result = Napi::Array::New(env, size);
 
-          SetArrayElement(env, result, std::move(t),
-                          std::make_index_sequence<size>());
+          std::vector<napi_value> vec = ToVector(env, std::move(t));
+          for (uint32_t i = 0; i < vec.size(); i++) {
+            result.Set(i, Napi::Value(env, vec[i]));
+          }
 
           return result;
         },
@@ -588,6 +584,94 @@ struct ValueTransformer<
  public:
   static Napi::Value ToJS(Napi::Env env, E e) {
     return E::JSError::New(env, e.Message()).Value();
+  }
+};
+
+namespace details {
+
+template <typename T>
+class TSFNContainer;
+
+template <typename... Args>
+class TSFNContainer<std::function<void(Args...)>> {
+ public:
+  NAPI_DISALLOW_ASSIGN_COPY(TSFNContainer)
+
+  TSFNContainer(Napi::Function fun)
+      : _tsfn(TSFN::New(fun.Env(), fun, "NapiHelper::details::TSFNContainer", 0,
+                        1)) {}
+
+  ~TSFNContainer() { _tsfn.Release(); }
+
+  static std::function<void(Args...)> Create(Napi::Function fun) {
+    return [tsfn = std::make_shared<TSFNContainer>(fun)](Args... args) {
+      tsfn->Call(std::move(args)...);
+    };
+  }
+
+ private:
+  using Tuple = std::tuple<Args...>;
+
+  void Call(Args &&...args) {
+    std::unique_ptr<Tuple> t =
+        std::make_unique<Tuple>(std::forward<Args>(args)...);
+    if (_tsfn.NonBlockingCall(t.get()) == napi_ok) {
+      t.release();
+    }
+  }
+
+  static void CallJS(Napi::Env env, Napi::Function fun, std::nullptr_t *,
+                     Tuple *_data) {
+    std::unique_ptr<Tuple> t(_data);  // RAII
+    std::vector<napi_value> args =
+        ValueTransformer<Tuple>::ToVector(env, std::move(*t));
+
+#ifdef NAPI_CPP_EXCEPTIONS
+    try {
+      fun.Call(args);
+    } catch (const Napi::Error &e) {
+      napi_fatal_exception(env, e.Value());
+    }
+#else
+    Napi::Value result = fun.Call(args);
+    if (result.IsEmpty()) {
+      Napi::Error e = env.GetAndClearPendingException();
+      napi_fatal_exception(env, e.Value());
+    }
+#endif
+  }
+
+  using TSFN = Napi::TypedThreadSafeFunction<std::nullptr_t, Tuple, CallJS>;
+
+  TSFN _tsfn;
+};
+
+template <typename T, typename Enable = void>
+struct is_std_function : std::false_type {};
+
+template <typename Ret, typename... Args>
+struct is_std_function<std::function<Ret(Args...)>> : std::true_type {};
+
+}  // namespace details
+
+template <typename Callable>
+struct ValueTransformer<
+    Callable,
+    std::enable_if_t<
+        std::is_function_v<std::remove_pointer_t<Callable>> ||
+        std::is_member_function_pointer_v<decltype(&Callable::operator())>>> {
+  static std::optional<Callable> FromJS(Napi::Value value) {
+    static_assert(details::is_std_function<Callable>::value,
+                  "arguments fn can only be std::function<void(Args...)>");
+    if (!value.IsFunction()) {
+      return {};
+    }
+    Napi::Function fun = value.As<Napi::Function>();
+    return details::TSFNContainer<Callable>::Create(fun);
+  }
+
+  static Napi::Value ToJS(Napi::Env env, Callable v) {
+    return Function::New(env, std::move(v));
   }
 };
 

@@ -46,6 +46,7 @@ Supported argument types :
 | [u]int[8,16,32]\_t                                | number                                    |
 | [u]int64_t                                        | BigInt                                    |
 | float, double                                     | number                                    |
+| std::function<void(Args...)>                      | (args...) => void                         |
 | std::string, std::u16string                       | string                                    |
 | std::vector\<T>                                   | T[]                                       |
 | std::variant\<T1, T2, ...>                        | T1 \| T2 \| ...                           |
@@ -53,6 +54,8 @@ Supported argument types :
 | std::tuple\<T1, T2, ...>                          | [T1, T2, ...]                             |
 | Napi::{Object, Array, Function, TypedArray, etc.} | Object, Array, Function, TypedArray, etc. |
 | T\*                                               | instance of [Class](./class.md) T         |
+
+`std::function<void(Args...)>` arguments are [Thread Safe Functions](./thread_safe_function.md), they are safe to call in any thread.
 
 ## Return Type
 
@@ -75,6 +78,11 @@ Supported return types :
 | std::tuple\<T1, T2, ...>                            | [T1, T2, ...]                             |
 | Napi::{Object, Array, Function, TypedArray, etc.}   | Object, Array, Function, TypedArray, etc. |
 | NapiHelper::{Error, RangeError, TypeError}          | Error, RangeError, TypeError              |
+
+`const char*`, `std::string_view` and `std::u16string_view` return values are preferred than `std::string` and `std::u16string` since there is no unnecessary copy.
+
+`NapiHelper::{Error, RangeError, TypeError}` return values will be transformed to JavaScript error values.
+But there is no JavaScript exception thrown implicitly. To throw exceptions, see [Error Handling](./error_handling.md).
 
 ## Inject CallbackInfo
 

@@ -48,6 +48,7 @@ NAPI_HELPER_EXPORT
 - [Function](./doc/function.md)
 - [Class](./doc/class.md)
 - [Mix with node-addon-api](./doc/mix_with_napi.md)
+- [Thread Safe Function](./doc/thread_safe_function.md)
 - [Error Handling](./doc/error_handling.md)
 
 ## Thanks
