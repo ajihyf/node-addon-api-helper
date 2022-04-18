@@ -7,6 +7,15 @@
 
 Based on [node-addon-api](https://github.com/nodejs/node-addon-api), **node-addon-api-helper** provides a more convenient, type-safe and boilerplate-less way to write Node.js C++ addons.
 
+Features:
+
+- Automatically transform values between JavaScript and C++
+- Automatically register exports
+- Class binding
+- Custom object type
+- Thread safe function
+- Can be used together with original node-addon-api, no need to rewrite all
+
 ## QuickStart
 
 ```bash
@@ -46,6 +55,7 @@ NAPI_HELPER_EXPORT
 
 - [Exports](./doc/exports.md)
 - [Function](./doc/function.md)
+- [Object](./doc/object.md)
 - [Class](./doc/class.md)
 - [Mix with node-addon-api](./doc/mix_with_napi.md)
 - [Thread Safe Function](./doc/thread_safe_function.md)

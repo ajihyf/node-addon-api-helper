@@ -1169,6 +1169,99 @@ inline ClassRegistration<T> &ClassRegistration<T>::StaticAccessor(
   return *this;
 }
 
+namespace details {
+
+template <typename T>
+struct ObjectFieldEntry {
+  std::function<bool(Napi::Object, T &)> FromJS;
+  std::function<void(T &, Napi::Object)> ToJS;
+};
+
+template <typename T>
+class ObjectFieldEntryStore {
+ public:
+  static std::vector<ObjectFieldEntry<T>> &descriptors() {
+    static std::vector<ObjectFieldEntry<T>> descriptors_;
+    return descriptors_;
+  }
+
+  template <typename M>
+  static void AddField(const char *name, M T::*m) {
+    using Real = typename remove_optional<M>::type;
+    constexpr bool is_opt = is_optional<M>::value;
+
+    descriptors().push_back(
+        {[name, m](Napi::Object js_obj, T &obj) -> bool {
+           std::optional<Real> v =
+               ValueTransformer<Real>::FromJS(js_obj.Get(name));
+           if constexpr (!is_opt) {
+             if (!v.has_value()) {
+               return false;
+             }
+             obj.*m = std::move(*v);
+           } else {
+             obj.*m = std::move(v);
+           }
+
+           return true;
+         },
+         [name, m](T &obj, Napi::Object js_obj) -> void {
+           if constexpr (is_opt) {
+             if (!((obj.*m).has_value())) {
+               return;
+             }
+             js_obj.Set(name, ValueTransformer<Real>::ToJS(
+                                  js_obj.Env(), std::move(*(obj.*m))));
+           } else {
+             js_obj.Set(name, ValueTransformer<Real>::ToJS(js_obj.Env(),
+                                                           std::move(obj.*m)));
+           }
+         }});
+  }
+};
+
+}  // namespace details
+
+template <typename T>
+struct ValueTransformer<Object<T>> {
+  static std::optional<Object<T>> FromJS(Napi::Value value) {
+    if (!value.IsObject()) {
+      return {};
+    }
+    Napi::Object obj = value.As<Napi::Object>();
+    T t;
+    for (auto &it : details::ObjectFieldEntryStore<T>::descriptors()) {
+      if (!it.FromJS(obj, t)) {
+        return {};
+      }
+    }
+    return std::move(t);
+  }
+
+  static Napi::Value ToJS(Napi::Env env, Object<T> v) {
+    Napi::Object obj = Napi::Object::New(env);
+    for (auto &it : details::ObjectFieldEntryStore<T>::descriptors()) {
+      it.ToJS(v, obj);
+    }
+    return obj;
+  }
+};
+
+template <typename T>
+template <auto T::*m>
+inline ObjectRegistration<T> ObjectRegistration<T>::Member(const char *name) {
+  details::ObjectFieldEntryStore<T>::AddField(name, m);
+  return *this;
+}
+
+template <typename T>
+inline ObjectRegistration<T> Registration::Object() {
+  return ObjectRegistration<T>();
+}
+
+template <typename T>
+template <typename... Args>
+inline Object<T>::Object(Args &&...args) : T(std::forward<Args>(args)...) {}
 }  // namespace NapiHelper
 
 #define NAPI_HELPER_EXPORT                                          \

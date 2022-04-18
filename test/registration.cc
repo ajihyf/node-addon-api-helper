@@ -35,6 +35,20 @@ class Calculator {
 
 uint32_t Calculator::_count = 0;
 
+struct MyObject {
+  std::string str;
+  std::optional<uint32_t> num;
+};
+
+NapiHelper::Object<MyObject> MyObjectMethod(
+    NapiHelper::Object<MyObject> input) {
+  return MyObject{
+      input.str + " world",
+      input.num.has_value() ? std::optional<uint32_t>(*input.num + 1)
+                            : std::nullopt,
+  };
+}
+
 }  // namespace
 
 NAPI_HELPER_REGISTRATION {
@@ -45,6 +59,10 @@ NAPI_HELPER_REGISTRATION {
   reg::Function("add",
                 [](uint32_t a, uint32_t b) -> uint32_t { return a + b; });
   reg::Function<Add>("addTpl");
+
+  reg::Object<MyObject>().Member<&MyObject::num>("num").Member<&MyObject::str>(
+      "str");
+  reg::Function<MyObjectMethod>("myObjectMethod");
 
   reg::Class<Calculator, uint32_t>("Calculator")
       .InstanceMethod<&Calculator::add>("add")

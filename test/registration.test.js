@@ -15,6 +15,17 @@ describe('Registration', () => {
     expect(binding.addTpl(1, 2)).to.eq(3)
   })
 
+  it('register custom object', () => {
+    expect(binding.myObjectMethod({ str: 'hello' })).to.eql({
+      str: 'hello world'
+    })
+    expect(binding.myObjectMethod({ str: 'hello', num: 42 })).to.eql({
+      str: 'hello world',
+      num: 43
+    })
+    expect(() => binding.myObjectMethod({})).to.throw(TypeError)
+  })
+
   it('register class', () => {
     const calculator = new binding.Calculator(1)
     expect(calculator.num).to.eq(1)

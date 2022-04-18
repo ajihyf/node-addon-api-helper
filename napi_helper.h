@@ -222,6 +222,13 @@ class ClassRegistration {
       void *data = nullptr);
 };
 
+template <typename T>
+class ObjectRegistration {
+ public:
+  template <auto T::*m>
+  ObjectRegistration Member(const char *name);
+};
+
 class Registration {
  public:
   template <typename T>
@@ -237,7 +244,16 @@ class Registration {
   template <typename T, typename... CtorArgs>
   static ClassRegistration<T> Class(const char *name);
 
+  template <typename T>
+  static ObjectRegistration<T> Object();
+
   static Napi::Object ModuleCallback(Napi::Env, Napi::Object);
+};
+
+template <typename T>
+struct Object : T {
+  template <typename... Args>
+  Object(Args &&...args);
 };
 
 }  // namespace NapiHelper
