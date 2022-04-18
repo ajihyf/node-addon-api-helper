@@ -721,10 +721,25 @@ class AsyncWorkWorker : public Napi::AsyncWorker {
   AsyncWork<void> _task;
 };
 
+template <typename T, typename Enable = void>
+struct is_result : std::false_type {};
+
 template <typename T, typename E>
+struct is_result<Result<T, E>> : std::true_type {};
+
+template <class T>
+struct result_type;
+
+template <typename T, typename E>
+struct result_type<Result<T, E>> {
+  typedef T Resolve;
+  typedef E Reject;
+};
+
+template <typename T>
 class PromiseAsyncWorker : public Napi::AsyncWorker {
  public:
-  PromiseAsyncWorker(Napi::Env env, AsyncWork<Result<T, E>> task)
+  PromiseAsyncWorker(Napi::Env env, AsyncWork<T> task)
       : Napi::AsyncWorker(env), _task(std::move(task)), _deferred(env) {}
 
   ~PromiseAsyncWorker() {}
@@ -735,24 +750,32 @@ class PromiseAsyncWorker : public Napi::AsyncWorker {
 
   void OnOK() override {
     if (_result.has_value()) {
-      auto &promise_result = _result.value();
-      if (promise_result.resolve_value.has_value()) {
-        _deferred.Resolve(ValueTransformer<T>::ToJS(
-            Env(), std::move(*promise_result.resolve_value)));
-      } else {
-        if constexpr (!std::is_same_v<E, std::nullptr_t>) {
-          if (_result.value().reject_value.has_value()) {
-            _deferred.Reject(ValueTransformer<E>::ToJS(
-                Env(), std::move(*promise_result.reject_value)));
+      if constexpr (is_result<T>::value) {
+        using Resolve = typename result_type<T>::Resolve;
+        using Reject = typename result_type<T>::Reject;
+
+        auto &promise_result = _result.value();
+        if (promise_result.resolve_value.has_value()) {
+          _deferred.Resolve(ValueTransformer<Resolve>::ToJS(
+              Env(), std::move(*promise_result.resolve_value)));
+        } else {
+          if constexpr (!std::is_same_v<Reject, std::nullptr_t>) {
+            if (_result.value().reject_value.has_value()) {
+              _deferred.Reject(ValueTransformer<Reject>::ToJS(
+                  Env(), std::move(*promise_result.reject_value)));
+            }
           }
         }
+      } else {
+        _deferred.Resolve(
+            ValueTransformer<T>::ToJS(Env(), std::move(*_result)));
       }
     }
   }
 
  private:
-  AsyncWork<Result<T, E>> _task;
-  std::optional<Result<T, E>> _result;
+  AsyncWork<T> _task;
+  std::optional<T> _result;
   Napi::Promise::Deferred _deferred;
 };
 }  // namespace details
@@ -766,11 +789,11 @@ struct ValueTransformer<AsyncWork<void>> {
   }
 };
 
-template <typename T, typename E>
-struct ValueTransformer<AsyncWork<Result<T, E>>> {
-  static Napi::Value ToJS(Napi::Env env, AsyncWork<Result<T, E>> task) {
+template <typename T>
+struct ValueTransformer<AsyncWork<T>, std::enable_if_t<!std::is_void_v<T>>> {
+  static Napi::Value ToJS(Napi::Env env, AsyncWork<T> task) {
     auto *promise_worker =
-        new details::PromiseAsyncWorker<T, E>(env, std::move(task));
+        new details::PromiseAsyncWorker<T>(env, std::move(task));
     promise_worker->Queue();
     return promise_worker->Promise();
   }

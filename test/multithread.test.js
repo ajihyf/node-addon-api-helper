@@ -28,13 +28,13 @@ describe('multithread', () => {
   })
 
   it('use async worker', done => {
-    multithread.asyncWorker(10, () => {
+    multithread.asyncWorker(5, () => {
       done()
     })
   })
 
   it('use promise worker', async () => {
-    expect(await multithread.promiseWorker(20)).to.eq(20 + 42)
+    expect(await multithread.promiseWorker(5)).to.eq(5 + 42)
   })
 
   it('use promise worker with reject', (done) => {

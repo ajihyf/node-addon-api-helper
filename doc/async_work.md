@@ -4,7 +4,7 @@ Node.js has builtin worker threads, **naah** provides `AsyncWork` to automatical
 
 ## Normal Work
 
-Normal works without return value can be created by `naah::AsyncWork<void>` :
+To create work without return value, use `naah::AsyncWork<void>` :
 
 ```cpp
 naah::AsyncWork<void> AsyncWorker(uint32_t sleep,
@@ -18,7 +18,18 @@ naah::AsyncWork<void> AsyncWorker(uint32_t sleep,
 
 ## Return Promise
 
-To return a promise, use `naah::AsyncWork<naah::Result<ResolveType, RejectType>>` :
+To return a promise, use `naah::AsyncWork<T>` :
+
+```cpp
+naah::AsyncWork<uint32_t> PromiseWorker(uint32_t num) {
+  return [num]() -> uint32_t {
+    std::this_thread::sleep_for(std::chrono::milliseconds(num));
+    return num + 42;
+  };
+}
+```
+
+To return a promise with rejection, use `naah::AsyncWork<naah::Result<ResolveType, RejectType>>` :
 
 ```cpp
 naah::AsyncWork<naah::Result<uint32_t, naah::RangeError>>

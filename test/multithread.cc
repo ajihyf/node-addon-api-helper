@@ -6,7 +6,7 @@ namespace {
 void AsyncNotify(uint32_t num, std::function<void(uint32_t)> fun) {
   for (uint32_t i = 0; i < num; i++) {
     std::thread([i, fun] {
-      std::this_thread::sleep_for(std::chrono::milliseconds(i * 10));
+      std::this_thread::sleep_for(std::chrono::milliseconds(i));
       fun(i);
     }).detach();
   }
@@ -32,8 +32,8 @@ naah::AsyncWork<void> AsyncWorker(uint32_t sleep, std::function<void()> cb) {
   };
 }
 
-naah::AsyncWork<naah::Result<uint32_t>> PromiseWorker(uint32_t num) {
-  return [num]() -> naah::Result<uint32_t> {
+naah::AsyncWork<uint32_t> PromiseWorker(uint32_t num) {
+  return [num]() -> uint32_t {
     std::this_thread::sleep_for(std::chrono::milliseconds(num));
     return num + 42;
   };
