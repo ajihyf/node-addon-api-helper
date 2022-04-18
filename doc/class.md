@@ -7,7 +7,7 @@ To export a class `T`, inherit `naah::Class` and use `naah::Registration::Class`
 Since it's impossible to get the address of a C++ constructor, you need to specify constructor arguments explicitly :
 
 ```cpp
-class A: public naah::Class {
+class A : public naah::Class {
  public:
   A(uint32_t, std::string);
 };
@@ -22,7 +22,7 @@ NAAH_REGISTRATION {
 ## InstanceMethod
 
 ```cpp
-class A {
+class A : public naah::Class {
  public:
   void hello();
 };
@@ -38,7 +38,7 @@ NAAH_REGISTRATION {
 ## InstanceAccessor
 
 ```cpp
-class A {
+class A : public naah::Class {
  public:
   uint32_t num();
   void set_num(uint32_t);
@@ -55,7 +55,7 @@ NAAH_REGISTRATION {
 ## StaticMethod
 
 ```cpp
-class A {
+class A : public naah::Class {
  public:
   static void hello();
 };
@@ -71,7 +71,7 @@ NAAH_REGISTRATION {
 ## StaticAccessor
 
 ```cpp
-class A {
+class A : public naah::Class {
  public:
   static uint32_t num();
   static void set_num(uint32_t);
@@ -92,7 +92,7 @@ To export private methods :
 ```cpp
 #include <naah_friend.h>
 
-class A {
+class A : public naah::Class {
   void privateMethod();
 
   NAAH_FRIEND

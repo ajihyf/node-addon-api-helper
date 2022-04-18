@@ -144,10 +144,10 @@ class ScriptWrappable : public Napi::ObjectWrap<ScriptWrappable<T>> {
 `Registration` is the class to store values exported by `NAAH_REGISTRATION`.
 
 ```cpp
-class Registration {
+class Registration : public Napi::Addon<Registration> {
  public:
   template <typename T>
-  static void Value(const char *name, const T &t);
+  static void Value(const char *name, T t);
 
   template <auto fn>
   static void Function(const char *name, void *data = nullptr);
@@ -159,8 +159,15 @@ class Registration {
   template <typename T, typename... CtorArgs>
   static ClassRegistration<T> Class(const char *name);
 
-  static Napi::Object ModuleCallback(Napi::Env, Napi::Object);
+  template <typename T>
+  static ObjectRegistration<T> Object();
+
+  Registration(Napi::Env env, Napi::Object exports);
+
+  template <typename T>
+  Napi::Function FindClass();
+
+ private:
+  std::map<uint64_t, Napi::FunctionReference> classes_;
 };
 ```
-
-If you are not using `NAAH_EXPORT` macro to export module. You can use `Registration::ModuleCallback` to get the stored values.
