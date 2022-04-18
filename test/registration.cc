@@ -6,7 +6,7 @@
 namespace {
 uint32_t Add(uint32_t a, uint32_t b) { return a + b; }
 
-class Calculator {
+class Calculator : public NapiHelper::Class {
   uint32_t _num;
   Calculator(uint32_t num) : _num(num) {}
 
@@ -30,23 +30,24 @@ class Calculator {
 
   static void set_count(uint32_t count) { _count = count; }
 
+  static Calculator create(uint32_t num) { return Calculator(num); }
+
   NAPI_HELPER_FRIEND
 };
 
 uint32_t Calculator::_count = 0;
 
-struct MyObject {
+struct MyObject : NapiHelper::Object {
   std::string str;
   std::optional<uint32_t> num;
 };
 
-NapiHelper::Object<MyObject> MyObjectMethod(
-    NapiHelper::Object<MyObject> input) {
-  return MyObject{
-      input.str + " world",
-      input.num.has_value() ? std::optional<uint32_t>(*input.num + 1)
-                            : std::nullopt,
-  };
+MyObject MyObjectMethod(MyObject input) {
+  return MyObject{{},
+                  input.str + " world",
+                  input.num.has_value()
+                      ? std::optional<uint32_t>(*input.num + 1)
+                      : std::nullopt};
 }
 
 }  // namespace
@@ -69,6 +70,7 @@ NAPI_HELPER_REGISTRATION {
       .InstanceAccessor<&Calculator::num, &Calculator::set_num>("num")
       .InstanceAccessor<&Calculator::num>("readonlyNum")
       .StaticMethod<&Calculator::addCount>("add")
+      .StaticMethod<&Calculator::create>("create")
       .StaticAccessor<&Calculator::count, &Calculator::set_count>("count")
       .StaticAccessor<&Calculator::count>("readonlyCount");
 }

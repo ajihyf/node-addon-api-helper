@@ -57,4 +57,10 @@ describe('Registration', () => {
     expect(Calculator.count).to.eq(47)
     expect(Calculator.readonlyCount).to.eq(47)
   })
+
+  it('return class instance', () => {
+    const calculator = binding.Calculator.create(1)
+    expect(calculator.num).to.eq(1)
+    expect(calculator.add(2)).to.eq(3)
+  })
 })

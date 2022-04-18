@@ -1,7 +1,7 @@
 #include <napi_helper.h>
 
 namespace {
-class TestObject {
+class TestObject : public NapiHelper::Class {
  public:
   TestObject(uint32_t num) : _num(num) {}
 
@@ -52,7 +52,7 @@ class TestObject {
 
 uint32_t TestObject::_count = 0;
 
-class AnotherTestObject {
+class AnotherTestObject : public NapiHelper::Class {
  public:
   AnotherTestObject(const Napi::CallbackInfo&) {}
 

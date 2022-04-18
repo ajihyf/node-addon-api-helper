@@ -1,13 +1,13 @@
 # Class
 
-Use `NapiHelper::Registration::Class` to register class with methods.
+To export a class `T`, inherit `NapiHelper::Class` and use `NapiHelper::Registration::Class` to register class with methods.
 
 ## Constructor
 
 Since it's impossible to get the address of a C++ constructor, you need to specify constructor arguments explicitly :
 
 ```cpp
-class A {
+class A: public NapiHelper::Class {
  public:
   A(uint32_t, std::string);
 };
@@ -101,13 +101,21 @@ class A {
 
 ## Class as Argument
 
-Exported class object can also be function arguments. This feature is supported for NAPI_VERSION >= 8.
+Exported class object can also be function arguments and return value. This feature is supported for NAPI_VERSION >= 8.
 
 ```cpp
-class Bar {
+class Foo : public NapiHelper::Class {
  public:
-  void AddTest(Foo* foo, uint32_t num) {
-    foo->Add(num);
+  Foo(uint32_t num);
+  uint32_t num;
+};
+
+class Bar : public NapiHelper::Class {
+ public:
+  Foo NewFoo(Foo* foo, uint32_t num) {
+    return Foo(foo->num + num);
   }
 };
 ```
+
+Note that the argument type is a non-null pointer. Since the instance is managed by JavaScript VM, you should never delete it or pass it to other threads.

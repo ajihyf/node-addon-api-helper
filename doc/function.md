@@ -53,7 +53,8 @@ Supported argument types :
 | std::optional\<T>                                 | T \| undefined                            |
 | std::tuple\<T1, T2, ...>                          | [T1, T2, ...]                             |
 | Napi::{Object, Array, Function, TypedArray, etc.} | Object, Array, Function, TypedArray, etc. |
-| T\*                                               | instance of [Class](./class.md) T         |
+| T (inherits [NapiHelper::Object](./object.md))    | object of interface T                     |
+| T\* (inherits [NapiHelper::Class](./class.md))    | instance of class T                       |
 
 `std::function<void(Args...)>` arguments are [Thread Safe Functions](./thread_safe_function.md), they are safe to call in any thread.
 
@@ -78,6 +79,8 @@ Supported return types :
 | std::tuple\<T1, T2, ...>                            | [T1, T2, ...]                             |
 | Napi::{Object, Array, Function, TypedArray, etc.}   | Object, Array, Function, TypedArray, etc. |
 | NapiHelper::{Error, RangeError, TypeError}          | Error, RangeError, TypeError              |
+| T (inherits [NapiHelper::Object](./object.md))      | object of interface T                     |
+| T (inherits [NapiHelper::Class](./class.md))        | instance of class T                       |
 
 `const char*`, `std::string_view` and `std::u16string_view` return values are preferred than `std::string` and `std::u16string` since there is no unnecessary copy.
 

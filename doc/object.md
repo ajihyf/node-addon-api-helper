@@ -1,16 +1,16 @@
 # Object
 
-To support a custom object `T` as function arguments and return value, register it with `NapiHelper::Registration::Object` and use `NapiHelper::Object<T>` as argument or return type. Note that `T` should be [default constructible](https://en.cppreference.com/w/cpp/types/is_default_constructible) and contains only public members.
+To support a custom object `T` as function arguments and return value, inherit `NapiHelper::Object` and register it with `NapiHelper::Registration::Object` as argument or return type. Note that `T` should be [default constructible](https://en.cppreference.com/w/cpp/types/is_default_constructible) and contains only public members.
 
 ```cpp
-struct MyObject {
+struct MyObject: NapiHelper::Object {
   std::string str;
   std::optional<uint32_t> num;
 };
 
-NapiHelper::Object<MyObject> MyObjectMethod(
-    NapiHelper::Object<MyObject> input) {
+MyObject MyObjectMethod(MyObject input) {
   return MyObject{
+      {},
       input.str + " world",
       input.num.has_value() ? std::optional<uint32_t>(*input.num + 1)
                             : std::nullopt,

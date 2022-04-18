@@ -558,7 +558,7 @@ struct ValueTransformer<std::vector<T>> {
 #ifdef NAPI_HELPER_TAG_OBJECT_WRAP
 
 template <typename T>
-struct ValueTransformer<T *, std::enable_if_t<std::is_class_v<T>>> {
+struct ValueTransformer<T *, std::enable_if_t<std::is_base_of_v<Class, T>>> {
  public:
   static std::optional<T *> FromJS(Napi::Value value) {
     using Wrapped = ScriptWrappable<std::remove_const_t<T>>;
@@ -573,6 +573,26 @@ struct ValueTransformer<T *, std::enable_if_t<std::is_class_v<T>>> {
       return {};
     }
     return &(Wrapped::Unwrap(obj)->wrapped());
+  }
+};
+
+template <typename T>
+struct ValueTransformer<T, std::enable_if_t<std::is_base_of_v<Class, T>>> {
+ public:
+  static Napi::Value ToJS(Napi::Env env, T t) {
+    Registration *reg = env.GetInstanceData<Registration>();
+    Napi::Function clazz = reg->FindClass<T>();
+    if (clazz.IsEmpty()) {
+      return env.Undefined();  // prevent crash
+    }
+
+    // RAII, maybe moved in ScriptWrappable constructor
+    std::unique_ptr<T> p(new T(std::move(t)));
+
+    return clazz.New(
+        {Napi::External<napi_type_tag>::New(
+             env, const_cast<napi_type_tag *>(ScriptWrappable<T>::type_tag())),
+         Napi::External<std::unique_ptr<T>>::New(env, &p)});
   }
 };
 
@@ -823,8 +843,18 @@ template <typename T>
 inline ScriptWrappable<T>::ScriptWrappable(const Napi::CallbackInfo &info)
     : Napi::ObjectWrap<This>(info) {
 #ifdef NAPI_HELPER_TAG_OBJECT_WRAP
-  napi_type_tag_object(info.Env(), info.This(), type_tag());
+  if constexpr (std::is_base_of_v<Class, T>) {
+    napi_type_tag_object(info.Env(), info.This(), type_tag());
+    if (info[0].IsExternal() &&
+        info[0].As<Napi::External<napi_type_tag>>().Data() == type_tag()) {
+      // created by ValueTransformer
+      _wrapped =
+          std::move(*info[1].As<Napi::External<std::unique_ptr<T>>>().Data());
+      return;
+    }
+  }
 #endif
+
   auto t_ctor = reinterpret_cast<details::Invoker::ConstructFn<T>>(info.Data());
 
   _wrapped = t_ctor(info);
@@ -1020,9 +1050,7 @@ ScriptWrappable<T>::StaticAccessor(Napi::Symbol name,
 
 template <typename T>
 inline const napi_type_tag *ScriptWrappable<T>::type_tag() {
-  static_assert(std::is_class_v<T>, "T must be class");
-  static_assert(!std::is_const_v<T>,
-                "T must be non const class");  // make sure no `const T` exists
+  static_assert(std::is_base_of_v<Class, T>, "T must inherits Class");
   static const napi_type_tag tag = {reinterpret_cast<uintptr_t>(&tag),
                                     reinterpret_cast<uintptr_t>(&tag)};
   return &tag;
@@ -1041,8 +1069,19 @@ struct RegistrationEntry {
   }
 };
 
+struct ClassRegistrationEntry {
+  const char *name;
+  uint64_t type_tag;
+  std::function<Napi::Function(Napi::Env, const char *)> init_cb;
+
+  static std::vector<ClassRegistrationEntry> &Entries() {
+    static std::vector<ClassRegistrationEntry> entries;
+    return entries;
+  }
+};
+
 template <typename T>
-class ClassRegistrationEntry {
+class ClassRegistration {
  private:
   static std::vector<typename ScriptWrappable<T>::PropertyDescriptor>
       &descriptors() {
@@ -1052,7 +1091,7 @@ class ClassRegistrationEntry {
   }
 
   template <typename... CtorArgs>
-  static Napi::Value DefineClassCallback(Napi::Env env, const char *name) {
+  static Napi::Function DefineClassCallback(Napi::Env env, const char *name) {
     return ScriptWrappable<T>::template DefineClass<CtorArgs...>(env, name,
                                                                  descriptors());
   }
@@ -1060,8 +1099,9 @@ class ClassRegistrationEntry {
  public:
   template <typename... CtorArgs>
   static void DefineClass(const char *name) {
-    RegistrationEntry::Entries().push_back(
-        RegistrationEntry{name, DefineClassCallback<CtorArgs...>});
+    ClassRegistrationEntry::Entries().push_back(
+        ClassRegistrationEntry{name, ScriptWrappable<T>::type_tag()->lower,
+                               DefineClassCallback<CtorArgs...>});
   }
 
   static void AddPropertyDescriptor(
@@ -1071,12 +1111,22 @@ class ClassRegistrationEntry {
 };
 }  // namespace details
 
-inline Napi::Object Registration::ModuleCallback(Napi::Env env,
-                                                 Napi::Object exports) {
+inline Registration::Registration(Napi::Env env, Napi::Object exports) {
   for (auto &it : details::RegistrationEntry::Entries()) {
     exports.Set(it.name, it.init_cb(env, it.name));
   }
-  return exports;
+  for (auto &it : details::ClassRegistrationEntry::Entries()) {
+    Napi::Function fun = it.init_cb(env, it.name);
+    classes_[it.type_tag] = Napi::Persistent(fun);
+    exports.Set(it.name, fun);
+  }
+}
+
+template <typename T>
+inline Napi::Function Registration::FindClass() {
+  uint64_t key = ScriptWrappable<T>::type_tag()->lower;
+  auto it = classes_.find(key);
+  return it == classes_.end() ? Napi::Function() : it->second.Value();
 }
 
 template <typename T>
@@ -1107,7 +1157,7 @@ inline void Registration::Function(const char *name, Callable callable,
 
 template <typename T, typename... CtorArgs>
 inline ClassRegistration<T> Registration::Class(const char *name) {
-  details::ClassRegistrationEntry<T>::template DefineClass<CtorArgs...>(name);
+  details::ClassRegistration<T>::template DefineClass<CtorArgs...>(name);
   return ClassRegistration<T>();
 }
 
@@ -1115,7 +1165,7 @@ template <typename T>
 template <auto T::*fn>
 inline ClassRegistration<T> &ClassRegistration<T>::InstanceMethod(
     const char *name, napi_property_attributes attributes, void *data) {
-  details::ClassRegistrationEntry<T>::AddPropertyDescriptor(
+  details::ClassRegistration<T>::AddPropertyDescriptor(
       ScriptWrappable<T>::template InstanceMethod<fn>(name, attributes, data));
   return *this;
 }
@@ -1124,7 +1174,7 @@ template <typename T>
 template <auto T::*getter>
 inline ClassRegistration<T> &ClassRegistration<T>::InstanceAccessor(
     const char *name, napi_property_attributes attributes, void *data) {
-  details::ClassRegistrationEntry<T>::AddPropertyDescriptor(
+  details::ClassRegistration<T>::AddPropertyDescriptor(
       ScriptWrappable<T>::template InstanceAccessor<getter>(name, attributes,
                                                             data));
   return *this;
@@ -1134,7 +1184,7 @@ template <typename T>
 template <auto T::*getter, auto T::*setter>
 inline ClassRegistration<T> &ClassRegistration<T>::InstanceAccessor(
     const char *name, napi_property_attributes attributes, void *data) {
-  details::ClassRegistrationEntry<T>::AddPropertyDescriptor(
+  details::ClassRegistration<T>::AddPropertyDescriptor(
       ScriptWrappable<T>::template InstanceAccessor<getter, setter>(
           name, attributes, data));
   return *this;
@@ -1144,7 +1194,7 @@ template <typename T>
 template <auto fn>
 inline ClassRegistration<T> &ClassRegistration<T>::StaticMethod(
     const char *name, napi_property_attributes attributes, void *data) {
-  details::ClassRegistrationEntry<T>::AddPropertyDescriptor(
+  details::ClassRegistration<T>::AddPropertyDescriptor(
       ScriptWrappable<T>::template StaticMethod<fn>(name, attributes, data));
   return *this;
 }
@@ -1153,7 +1203,7 @@ template <typename T>
 template <auto getter>
 inline ClassRegistration<T> &ClassRegistration<T>::StaticAccessor(
     const char *name, napi_property_attributes attributes, void *data) {
-  details::ClassRegistrationEntry<T>::AddPropertyDescriptor(
+  details::ClassRegistration<T>::AddPropertyDescriptor(
       ScriptWrappable<T>::template StaticAccessor<getter>(name, attributes,
                                                           data));
   return *this;
@@ -1163,7 +1213,7 @@ template <typename T>
 template <auto getter, auto setter>
 inline ClassRegistration<T> &ClassRegistration<T>::StaticAccessor(
     const char *name, napi_property_attributes attributes, void *data) {
-  details::ClassRegistrationEntry<T>::AddPropertyDescriptor(
+  details::ClassRegistration<T>::AddPropertyDescriptor(
       ScriptWrappable<T>::template StaticAccessor<getter, setter>(
           name, attributes, data));
   return *this;
@@ -1222,8 +1272,8 @@ class ObjectFieldEntryStore {
 }  // namespace details
 
 template <typename T>
-struct ValueTransformer<Object<T>> {
-  static std::optional<Object<T>> FromJS(Napi::Value value) {
+struct ValueTransformer<T, std::enable_if_t<std::is_base_of_v<Object, T>>> {
+  static std::optional<T> FromJS(Napi::Value value) {
     if (!value.IsObject()) {
       return {};
     }
@@ -1234,10 +1284,10 @@ struct ValueTransformer<Object<T>> {
         return {};
       }
     }
-    return Object<T>(std::move(t));
+    return std::move(t);
   }
 
-  static Napi::Value ToJS(Napi::Env env, Object<T> v) {
+  static Napi::Value ToJS(Napi::Env env, T v) {
     Napi::Object obj = Napi::Object::New(env);
     for (auto &it : details::ObjectFieldEntryStore<T>::descriptors()) {
       it.ToJS(v, obj);
@@ -1258,14 +1308,11 @@ inline ObjectRegistration<T> Registration::Object() {
   return ObjectRegistration<T>();
 }
 
-template <typename T>
-inline Object<T>::Object(T t) : T(std::move(t)) {}
 }  // namespace NapiHelper
 
-#define NAPI_HELPER_EXPORT                                          \
-  static Napi::ModuleRegisterCallback NAPI_HELPER_MODULE_CALLBACK = \
-      NapiHelper::Registration::ModuleCallback;                     \
-  NODE_API_MODULE(NODE_GYP_MODULE_NAME, NAPI_HELPER_MODULE_CALLBACK)
+#define NAPI_HELPER_EXPORT                                         \
+  using NAPI_HELPER_REGISTRATION_ADDON = NapiHelper::Registration; \
+  NODE_API_ADDON(NAPI_HELPER_REGISTRATION_ADDON)
 
 #define NAPI_HELPER_REGISTRATION \
   NAPI_C_CTOR(napi_helper_auto_register_function_)

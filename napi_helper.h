@@ -3,6 +3,7 @@
 
 #include <napi.h>
 
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -188,6 +189,8 @@ class ScriptWrappable : public Napi::ObjectWrap<ScriptWrappable<T>> {
 #endif
 };
 
+struct Class {};
+
 template <typename T>
 class ClassRegistration {
  public:
@@ -222,6 +225,8 @@ class ClassRegistration {
       void *data = nullptr);
 };
 
+struct Object {};
+
 template <typename T>
 class ObjectRegistration {
  public:
@@ -229,7 +234,7 @@ class ObjectRegistration {
   ObjectRegistration Member(const char *name);
 };
 
-class Registration {
+class Registration : public Napi::Addon<Registration> {
  public:
   template <typename T>
   static void Value(const char *name, T t);
@@ -247,12 +252,13 @@ class Registration {
   template <typename T>
   static ObjectRegistration<T> Object();
 
-  static Napi::Object ModuleCallback(Napi::Env, Napi::Object);
-};
+  Registration(Napi::Env env, Napi::Object exports);
 
-template <typename T>
-struct Object : T {
-  Object(T t);
+  template <typename T>
+  Napi::Function FindClass();
+
+ private:
+  std::map<uint64_t, Napi::FunctionReference> classes_;
 };
 
 }  // namespace NapiHelper
