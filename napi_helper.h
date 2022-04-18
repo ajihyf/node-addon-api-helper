@@ -252,8 +252,7 @@ class Registration {
 
 template <typename T>
 struct Object : T {
-  template <typename... Args>
-  Object(Args &&...args);
+  Object(T t);
 };
 
 }  // namespace NapiHelper

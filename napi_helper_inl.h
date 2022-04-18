@@ -493,7 +493,7 @@ struct ValueTransformer<std::tuple<Args...>> {
     ((result[Is] = ValueTransformer<std::tuple_element_t<Is, Tuple>>::ToJS(
           env, std::move(std::get<Is>(t)))),
      ...);
-    return std::move(result);
+    return result;
   }
 
  public:
@@ -1188,13 +1188,12 @@ class ObjectFieldEntryStore {
   template <typename M>
   static void AddField(const char *name, M T::*m) {
     using Real = typename remove_optional<M>::type;
-    constexpr bool is_opt = is_optional<M>::value;
 
     descriptors().push_back(
         {[name, m](Napi::Object js_obj, T &obj) -> bool {
            std::optional<Real> v =
                ValueTransformer<Real>::FromJS(js_obj.Get(name));
-           if constexpr (!is_opt) {
+           if constexpr (!is_optional<M>::value) {
              if (!v.has_value()) {
                return false;
              }
@@ -1206,7 +1205,7 @@ class ObjectFieldEntryStore {
            return true;
          },
          [name, m](T &obj, Napi::Object js_obj) -> void {
-           if constexpr (is_opt) {
+           if constexpr (is_optional<M>::value) {
              if (!((obj.*m).has_value())) {
                return;
              }
@@ -1235,7 +1234,7 @@ struct ValueTransformer<Object<T>> {
         return {};
       }
     }
-    return std::move(t);
+    return Object<T>(std::move(t));
   }
 
   static Napi::Value ToJS(Napi::Env env, Object<T> v) {
@@ -1260,8 +1259,7 @@ inline ObjectRegistration<T> Registration::Object() {
 }
 
 template <typename T>
-template <typename... Args>
-inline Object<T>::Object(Args &&...args) : T(std::forward<Args>(args)...) {}
+inline Object<T>::Object(T t) : T(std::move(t)) {}
 }  // namespace NapiHelper
 
 #define NAPI_HELPER_EXPORT                                          \
