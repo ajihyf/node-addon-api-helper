@@ -36,11 +36,12 @@ class AsyncWork {
 template <typename T, typename E = std::nullptr_t>
 class Result {
  public:
+  Result() = delete;
   Result(T t);
   Result(E e);
 
-  std::optional<T> resolve_value;
-  std::optional<E> reject_value;
+  std::optional<T> value;
+  std::optional<E> error;
 };
 
 template <typename T>

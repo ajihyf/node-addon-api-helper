@@ -701,10 +701,10 @@ template <typename Arg>
 inline AsyncWork<Ret>::AsyncWork(Arg &&arg) : task(std::forward<Arg>(arg)) {}
 
 template <typename T, typename E>
-inline Result<T, E>::Result(T t) : resolve_value(std::move(t)) {}
+inline Result<T, E>::Result(T t) : value(std::move(t)) {}
 
 template <typename T, typename E>
-inline Result<T, E>::Result(E e) : reject_value(std::move(e)) {}
+inline Result<T, E>::Result(E e) : error(std::move(e)) {}
 
 namespace details {
 
@@ -730,10 +730,10 @@ struct is_result<Result<T, E>> : std::true_type {};
 template <class T>
 struct result_type;
 
-template <typename T, typename E>
-struct result_type<Result<T, E>> {
-  typedef T Resolve;
-  typedef E Reject;
+template <typename T_, typename E_>
+struct result_type<Result<T_, E_>> {
+  typedef T_ T;
+  typedef E_ E;
 };
 
 template <typename T>
@@ -751,18 +751,18 @@ class PromiseAsyncWorker : public Napi::AsyncWorker {
   void OnOK() override {
     if (_result.has_value()) {
       if constexpr (is_result<T>::value) {
-        using Resolve = typename result_type<T>::Resolve;
-        using Reject = typename result_type<T>::Reject;
+        using Resolve = typename result_type<T>::T;
+        using Reject = typename result_type<T>::E;
 
         auto &promise_result = _result.value();
-        if (promise_result.resolve_value.has_value()) {
+        if (promise_result.value.has_value()) {
           _deferred.Resolve(ValueTransformer<Resolve>::ToJS(
-              Env(), std::move(*promise_result.resolve_value)));
+              Env(), std::move(*promise_result.value)));
         } else {
           if constexpr (!std::is_same_v<Reject, std::nullptr_t>) {
-            if (_result.value().reject_value.has_value()) {
+            if (_result.value().error.has_value()) {
               _deferred.Reject(ValueTransformer<Reject>::ToJS(
-                  Env(), std::move(*promise_result.reject_value)));
+                  Env(), std::move(*promise_result.error)));
             }
           }
         }
@@ -877,7 +877,20 @@ class Invoker {
       return Call(info, std::forward<Callable>(fn));
     } else {
       Ret result = Call(info, std::forward<Callable>(fn));
-      return ValueTransformer<Ret>::ToJS(info.Env(), std::move(result));
+      if constexpr (details::is_result<Ret>::value) {
+        using T = typename result_type<Ret>::T;
+        using E = typename result_type<Ret>::E;
+        if (result.value.has_value()) {
+          return ValueTransformer<T>::ToJS(info.Env(),
+                                           std::move(*result.value));
+        } else {
+          E::JSError::New(info.Env(), (*result.error).Message())
+              .ThrowAsJavaScriptException();
+          return info.Env().Undefined();
+        }
+      } else {
+        return ValueTransformer<Ret>::ToJS(info.Env(), std::move(result));
+      }
     }
   }
 

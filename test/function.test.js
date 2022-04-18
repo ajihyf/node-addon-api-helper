@@ -170,4 +170,12 @@ describe('function', () => {
       'bigger than 233'
     )
   })
+
+  it('calls function throws with Result<T, E>', () => {
+    expect(bindings.function.functionThrowsWithResult(42)).to.equal('42')
+    expect(() => bindings.function.functionThrowsWithResult(256)).to.throw(
+      RangeError,
+      'bigger than 233'
+    )
+  })
 })

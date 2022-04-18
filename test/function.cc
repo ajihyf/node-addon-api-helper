@@ -195,6 +195,14 @@ std::optional<std::string> FunctionThrowsManually(
   }
   return std::to_string(i);
 }
+
+naah::Result<std::string, naah::RangeError> FunctionThrowsWithResult(
+    uint32_t i) {
+  if (i > 233) {
+    return naah::RangeError("bigger than 233");
+  }
+  return std::to_string(i);
+}
 }  // namespace
 
 Napi::Object InitFunction(Napi::Env env) {
@@ -277,6 +285,8 @@ Napi::Object InitFunction(Napi::Env env) {
   obj["functionThrows"] = naah::Function::New<FunctionThrows>(env);
   obj["functionThrowsManually"] =
       naah::Function::New<FunctionThrowsManually>(env);
+  obj["functionThrowsWithResult"] =
+      naah::Function::New<FunctionThrowsWithResult>(env);
 
   return obj;
 }
