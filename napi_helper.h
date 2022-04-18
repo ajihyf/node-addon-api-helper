@@ -3,6 +3,7 @@
 
 #include <napi.h>
 
+#include <functional>
 #include <map>
 #include <memory>
 #include <optional>
@@ -24,13 +25,27 @@ struct ValueTransformer {
   static Napi::Value ToJS(Napi::Env, T);
 };
 
-struct Convert {
-  template <typename T>
-  static std::optional<T> FromJS(Napi::Value v);
+template <typename Ret = void>
+class AsyncWork {
+ public:
+  template <typename Arg>
+  AsyncWork(Arg &&arg);
 
-  template <typename T>
-  static Napi::Value ToJS(Napi::Env env, T v);
+  std::function<Ret()> task;
 };
+
+template <typename T, typename E = std::nullptr_t>
+class Result {
+ public:
+  Result(T t);
+  Result(E e);
+
+  std::optional<T> resolve_value;
+  std::optional<E> reject_value;
+};
+
+template <typename T>
+Napi::Value ConvertToJS(Napi::Env env, T v);
 
 struct Undefined {};
 struct Null {};

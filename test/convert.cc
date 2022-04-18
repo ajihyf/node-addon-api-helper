@@ -67,14 +67,14 @@ Napi::Object InitConvert(Napi::Env env) {
   Napi::Object obj = Napi::Object::New(env);
 
   Napi::Number num = Napi::Number::New(env, 42);
-  obj["num"] = NapiHelper::Convert::ToJS(
-      env, NapiHelper::Convert::FromJS<uint32_t>(num));
+  obj["num"] = NapiHelper::ConvertToJS(
+      env, NapiHelper::ValueTransformer<uint32_t>::FromJS(num));
 
-  obj["hehe"] = NapiHelper::Convert::ToJS(env, "hehe");
+  obj["hehe"] = NapiHelper::ConvertToJS(env, "hehe");
   obj["stringView"] =
-      NapiHelper::Convert::ToJS(env, std::string_view("stringView"));
+      NapiHelper::ConvertToJS(env, std::string_view("stringView"));
   obj["u16stringView"] =
-      NapiHelper::Convert::ToJS(env, std::u16string_view(u"u16stringView"));
+      NapiHelper::ConvertToJS(env, std::u16string_view(u"u16stringView"));
 
   obj["customMethod"] = NapiHelper::Function::New<CustomMethod>(env);
 

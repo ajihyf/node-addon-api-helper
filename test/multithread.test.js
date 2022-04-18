@@ -26,4 +26,21 @@ describe('multithread', () => {
       })
     })
   })
+
+  it('use async worker', done => {
+    multithread.asyncWorker(10, () => {
+      done()
+    })
+  })
+
+  it('use promise worker', async () => {
+    expect(await multithread.promiseWorker(20)).to.eq(20 + 42)
+  })
+
+  it('use promise worker with reject', (done) => {
+    multithread.promiseWorkerWithReject(100).catch(err => {
+      expect(err).to.be.instanceOf(RangeError)
+      done()
+    })
+  })
 })

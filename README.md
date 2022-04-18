@@ -14,7 +14,10 @@ Features:
 - Class binding
 - Custom object type
 - Thread safe function
+- Create async work and return promise
 - Can be used together with original node-addon-api, no need to rewrite all
+
+Under heavily development at the moment. Feedback is welcome!
 
 ## QuickStart
 
@@ -59,6 +62,7 @@ NAPI_HELPER_EXPORT
 - [Class](./doc/class.md)
 - [Mix with node-addon-api](./doc/mix_with_napi.md)
 - [Thread Safe Function](./doc/thread_safe_function.md)
+- [Async Work](./doc/async_work.md)
 - [Error Handling](./doc/error_handling.md)
 
 ## Thanks
