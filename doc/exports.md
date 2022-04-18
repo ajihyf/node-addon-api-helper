@@ -1,20 +1,20 @@
 # Exports
 
-Declare your exports inside macro `NAPI_HELPER_REGISTRATION` and use `NAPI_HELPER_EXPORT` to register your native module.
+Declare your exports inside macro `NAAH_REGISTRATION` and use `NAAH_EXPORT` to register your native module.
 
 ```cpp
-NAPI_HELPER_REGISTRATION {
+NAAH_REGISTRATION {
   // ... your exports code
 }
 
-NAPI_HELPER_EXPORT
+NAAH_EXPORT
 ```
 
 ## Constant Value
 
 ```cpp
-NAPI_HELPER_REGISTRATION {
-  using reg = NapiHelper::Registration;
+NAAH_REGISTRATION {
+  using reg = naah::Registration;
 
   reg::Value("num", 233);
   reg::Value("str", "hello world");
@@ -26,8 +26,8 @@ NAPI_HELPER_REGISTRATION {
 ```cpp
 uint32_t Add(uint32_t a, uint32_t b) { return a + b; }
 
-NAPI_HELPER_REGISTRATION {
-  using reg = NapiHelper::Registration;
+NAAH_REGISTRATION {
+  using reg = naah::Registration;
 
   reg::Function("add",
                 [](uint32_t a, uint32_t b) -> uint32_t { return a + b; });
@@ -49,8 +49,8 @@ class Calculator {
   }
 };
 
-NAPI_HELPER_REGISTRATION {
-  using reg = NapiHelper::Registration;
+NAAH_REGISTRATION {
+  using reg = naah::Registration;
 
   reg::Class<Calculator, uint32_t>("Calculator")
       .InstanceMethod<&Calculator::add>("add")

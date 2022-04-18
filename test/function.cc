@@ -1,4 +1,4 @@
-#include <napi_helper.h>
+#include <naah.h>
 
 namespace {
 uint32_t ArgsCallback(int32_t num1, std::optional<uint32_t> num2,
@@ -12,11 +12,9 @@ uint32_t ValueCallbackWithInfo(const Napi::CallbackInfo &info, int32_t num1) {
   return num1 + info.Length();
 }
 
-NapiHelper::Undefined UndefinedCallback(NapiHelper::Undefined) {
-  return NapiHelper::Undefined{};
-}
+naah::Undefined UndefinedCallback(naah::Undefined) { return naah::Undefined{}; }
 
-NapiHelper::Null NullCallback(NapiHelper::Null) { return NapiHelper::Null{}; }
+naah::Null NullCallback(naah::Null) { return naah::Null{}; }
 
 Napi::Value ValueCallback(Napi::Value value) { return value.ToString(); }
 
@@ -183,7 +181,7 @@ std::variant<uint32_t, std::string> FunctionWithVariants(
 
 std::string FunctionThrows(uint32_t i) {
   if (i > 42) {
-    throw NapiHelper::RangeError("bigger than 42");
+    throw naah::RangeError("bigger than 42");
   }
   return std::to_string(i);
 }
@@ -202,95 +200,83 @@ std::optional<std::string> FunctionThrowsManually(
 Napi::Object InitFunction(Napi::Env env) {
   Napi::Object obj = Napi::Object::New(env);
 
-  obj["argsCallback"] = NapiHelper::Function::New<ArgsCallback>(env);
+  obj["argsCallback"] = naah::Function::New<ArgsCallback>(env);
 
-  obj["customBadArgumentsCallbackTpl"] =
-      NapiHelper::Function::New<ArgsCallback>(env);
+  obj["customBadArgumentsCallbackTpl"] = naah::Function::New<ArgsCallback>(env);
   obj["customBadArgumentsCallback"] =
-      NapiHelper::Function::New(env, ArgsCallback, nullptr, nullptr);
+      naah::Function::New(env, ArgsCallback, nullptr, nullptr);
 
-  obj["undefinedCallback"] = NapiHelper::Function::New<UndefinedCallback>(env);
-  obj["nullCallback"] = NapiHelper::Function::New<NullCallback>(env);
-  obj["valueCallback"] = NapiHelper::Function::New<ValueCallback>(env);
-  obj["booleanCallback"] = NapiHelper::Function::New<BooleanCallback>(env);
-  obj["numberCallback"] = NapiHelper::Function::New<NumberCallback>(env);
-  obj["bigIntCallback"] = NapiHelper::Function::New<BigIntCallback>(env);
-  obj["dateCallback"] = NapiHelper::Function::New<DateCallback>(env);
-  obj["stringCallback"] = NapiHelper::Function::New<StringCallback>(env);
-  obj["objectCallback"] = NapiHelper::Function::New<ObjectCallback>(env);
-  obj["arrayCallback"] = NapiHelper::Function::New<ArrayCallback>(env);
-  obj["symbolCallback"] = NapiHelper::Function::New<SymbolCallback>(env);
-  obj["arrayBufferCallback"] =
-      NapiHelper::Function::New<ArrayBufferCallback>(env);
-  obj["typedArrayCallback"] =
-      NapiHelper::Function::New<TypedArrayCallback>(env);
-  obj["functionCallback"] = NapiHelper::Function::New<FunctionCallback>(env);
-  obj["promiseCallback"] = NapiHelper::Function::New<PromiseCallback>(env);
-  obj["dataViewCallback"] = NapiHelper::Function::New<DataViewCallback>(env);
+  obj["undefinedCallback"] = naah::Function::New<UndefinedCallback>(env);
+  obj["nullCallback"] = naah::Function::New<NullCallback>(env);
+  obj["valueCallback"] = naah::Function::New<ValueCallback>(env);
+  obj["booleanCallback"] = naah::Function::New<BooleanCallback>(env);
+  obj["numberCallback"] = naah::Function::New<NumberCallback>(env);
+  obj["bigIntCallback"] = naah::Function::New<BigIntCallback>(env);
+  obj["dateCallback"] = naah::Function::New<DateCallback>(env);
+  obj["stringCallback"] = naah::Function::New<StringCallback>(env);
+  obj["objectCallback"] = naah::Function::New<ObjectCallback>(env);
+  obj["arrayCallback"] = naah::Function::New<ArrayCallback>(env);
+  obj["symbolCallback"] = naah::Function::New<SymbolCallback>(env);
+  obj["arrayBufferCallback"] = naah::Function::New<ArrayBufferCallback>(env);
+  obj["typedArrayCallback"] = naah::Function::New<TypedArrayCallback>(env);
+  obj["functionCallback"] = naah::Function::New<FunctionCallback>(env);
+  obj["promiseCallback"] = naah::Function::New<PromiseCallback>(env);
+  obj["dataViewCallback"] = naah::Function::New<DataViewCallback>(env);
 
   obj["external"] = Napi::External<void>::New(env, nullptr);
-  obj["externalCallback"] = NapiHelper::Function::New<ExternalCallback>(env);
+  obj["externalCallback"] = naah::Function::New<ExternalCallback>(env);
 
-  obj["bufferCallback"] = NapiHelper::Function::New<BufferCallback>(env);
+  obj["bufferCallback"] = naah::Function::New<BufferCallback>(env);
 
-  obj["int8ArrayCallback"] = NapiHelper::Function::New<Int8ArrayCallback>(env);
-  obj["uint8ArrayCallback"] =
-      NapiHelper::Function::New<Uint8ArrayCallback>(env);
-  obj["int16ArrayCallback"] =
-      NapiHelper::Function::New<Int16ArrayCallback>(env);
-  obj["uint16ArrayCallback"] =
-      NapiHelper::Function::New<Uint16ArrayCallback>(env);
-  obj["int32ArrayCallback"] =
-      NapiHelper::Function::New<Int32ArrayCallback>(env);
-  obj["uint32ArrayCallback"] =
-      NapiHelper::Function::New<Uint32ArrayCallback>(env);
-  obj["float32ArrayCallback"] =
-      NapiHelper::Function::New<Float32ArrayCallback>(env);
-  obj["float64ArrayCallback"] =
-      NapiHelper::Function::New<Float64ArrayCallback>(env);
+  obj["int8ArrayCallback"] = naah::Function::New<Int8ArrayCallback>(env);
+  obj["uint8ArrayCallback"] = naah::Function::New<Uint8ArrayCallback>(env);
+  obj["int16ArrayCallback"] = naah::Function::New<Int16ArrayCallback>(env);
+  obj["uint16ArrayCallback"] = naah::Function::New<Uint16ArrayCallback>(env);
+  obj["int32ArrayCallback"] = naah::Function::New<Int32ArrayCallback>(env);
+  obj["uint32ArrayCallback"] = naah::Function::New<Uint32ArrayCallback>(env);
+  obj["float32ArrayCallback"] = naah::Function::New<Float32ArrayCallback>(env);
+  obj["float64ArrayCallback"] = naah::Function::New<Float64ArrayCallback>(env);
   obj["bigInt64ArrayCallback"] =
-      NapiHelper::Function::New<BigInt64ArrayCallback>(env);
+      naah::Function::New<BigInt64ArrayCallback>(env);
   obj["bigUint64ArrayCallback"] =
-      NapiHelper::Function::New<BigUint64ArrayCallback>(env);
+      naah::Function::New<BigUint64ArrayCallback>(env);
 
-  obj["boolCallback"] = NapiHelper::Function::New<BoolCallback>(env);
-  obj["doubleCallback"] = NapiHelper::Function::New<DoubleCallback>(env);
-  obj["floatCallback"] = NapiHelper::Function::New<FloatCallback>(env);
-  obj["uint8Callback"] = NapiHelper::Function::New<Uint8Callback>(env);
-  obj["uint16Callback"] = NapiHelper::Function::New<Uint16Callback>(env);
-  obj["uint32Callback"] = NapiHelper::Function::New<Uint32Callback>(env);
-  obj["int8Callback"] = NapiHelper::Function::New<Int8Callback>(env);
-  obj["int16Callback"] = NapiHelper::Function::New<Int16Callback>(env);
-  obj["int32Callback"] = NapiHelper::Function::New<Int32Callback>(env);
-  obj["int64Callback"] = NapiHelper::Function::New<Int64Callback>(env);
-  obj["uint64Callback"] = NapiHelper::Function::New<Uint64Callback>(env);
-  obj["strCallback"] = NapiHelper::Function::New<StrCallback>(env);
-  obj["u16strCallback"] = NapiHelper::Function::New<U16StrCallback>(env);
+  obj["boolCallback"] = naah::Function::New<BoolCallback>(env);
+  obj["doubleCallback"] = naah::Function::New<DoubleCallback>(env);
+  obj["floatCallback"] = naah::Function::New<FloatCallback>(env);
+  obj["uint8Callback"] = naah::Function::New<Uint8Callback>(env);
+  obj["uint16Callback"] = naah::Function::New<Uint16Callback>(env);
+  obj["uint32Callback"] = naah::Function::New<Uint32Callback>(env);
+  obj["int8Callback"] = naah::Function::New<Int8Callback>(env);
+  obj["int16Callback"] = naah::Function::New<Int16Callback>(env);
+  obj["int32Callback"] = naah::Function::New<Int32Callback>(env);
+  obj["int64Callback"] = naah::Function::New<Int64Callback>(env);
+  obj["uint64Callback"] = naah::Function::New<Uint64Callback>(env);
+  obj["strCallback"] = naah::Function::New<StrCallback>(env);
+  obj["u16strCallback"] = naah::Function::New<U16StrCallback>(env);
 
-  obj["vectorCallback"] = NapiHelper::Function::New<VectorCallback>(env);
-  obj["tupleCallback"] = NapiHelper::Function::New<TupleCallback>(env);
-  obj["functionWithVariants"] =
-      NapiHelper::Function::New<FunctionWithVariants>(env);
+  obj["vectorCallback"] = naah::Function::New<VectorCallback>(env);
+  obj["tupleCallback"] = naah::Function::New<TupleCallback>(env);
+  obj["functionWithVariants"] = naah::Function::New<FunctionWithVariants>(env);
 
-  obj["voidCallback"] = NapiHelper::Function::New<VoidCallback>(env);
+  obj["voidCallback"] = naah::Function::New<VoidCallback>(env);
 
   obj["valueCallbackWithInfo"] =
-      NapiHelper::Function::New<ValueCallbackWithInfo>(env);
+      naah::Function::New<ValueCallbackWithInfo>(env);
 
-  obj["lambda"] = NapiHelper::Function::New(
+  obj["lambda"] = naah::Function::New(
       env, [](int32_t num1) -> uint32_t { return num1 + 42; });
 
-  obj["lambdaWithVoid"] =
-      NapiHelper::Function::New(env, [](int32_t) -> void {});
+  obj["lambdaWithVoid"] = naah::Function::New(env, [](int32_t) -> void {});
 
-  obj["lambdaWithCapture"] = NapiHelper::Function::New(
+  obj["lambdaWithCapture"] = naah::Function::New(
       env, [num = std::make_unique<uint32_t>(233)](int32_t num1) -> uint32_t {
         return num1 + *num;
       });
 
-  obj["functionThrows"] = NapiHelper::Function::New<FunctionThrows>(env);
+  obj["functionThrows"] = naah::Function::New<FunctionThrows>(env);
   obj["functionThrowsManually"] =
-      NapiHelper::Function::New<FunctionThrowsManually>(env);
+      naah::Function::New<FunctionThrowsManually>(env);
 
   return obj;
 }

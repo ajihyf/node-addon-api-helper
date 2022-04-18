@@ -1,9 +1,9 @@
 # Object
 
-To support a custom object `T` as function arguments and return value, inherit `NapiHelper::Object` and register it with `NapiHelper::Registration::Object` as argument or return type. Note that `T` should be [default constructible](https://en.cppreference.com/w/cpp/types/is_default_constructible) and contains only public members.
+To support a custom object `T` as function arguments and return value, inherit `naah::Object` and register it with `naah::Registration::Object` as argument or return type. Note that `T` should be [default constructible](https://en.cppreference.com/w/cpp/types/is_default_constructible) and contains only public members.
 
 ```cpp
-struct MyObject: NapiHelper::Object {
+struct MyObject: naah::Object {
   std::string str;
   std::optional<uint32_t> num;
 };
@@ -17,8 +17,8 @@ MyObject MyObjectMethod(MyObject input) {
   };
 }
 
-NAPI_HELPER_REGISTRATION {
-  using reg = NapiHelper::Registration;
+NAAH_REGISTRATION {
+  using reg = naah::Registration;
 
   reg::Object<MyObject>()
       .Member<&MyObject::num>("num")

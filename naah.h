@@ -1,5 +1,5 @@
-#ifndef SRC_NAPI_HELPER_H_
-#define SRC_NAPI_HELPER_H_
+#ifndef SRC_NAAH_H_
+#define SRC_NAAH_H_
 
 #include <napi.h>
 
@@ -9,14 +9,13 @@
 #include <optional>
 #include <string>
 
-#if !defined(NAPI_HELPER_TAG_OBJECT_WRAP) && \
-    !defined(NAPI_HELPER_DISABLE_TAG_OBJECT_WRAP)
+#if !defined(NAAH_TAG_OBJECT_WRAP) && !defined(NAAH_DISABLE_TAG_OBJECT_WRAP)
 #if NAPI_VERSION >= 8
-#define NAPI_HELPER_TAG_OBJECT_WRAP
+#define NAAH_TAG_OBJECT_WRAP
 #endif
 #endif
 
-namespace NapiHelper {
+namespace naah {
 
 template <typename T, typename Enabled = void>
 struct ValueTransformer {
@@ -199,7 +198,7 @@ class ScriptWrappable : public Napi::ObjectWrap<ScriptWrappable<T>> {
       Napi::Symbol name, napi_property_attributes attributes = napi_default,
       void *data = nullptr);
 
-#ifdef NAPI_HELPER_TAG_OBJECT_WRAP
+#ifdef NAAH_TAG_OBJECT_WRAP
   static const napi_type_tag *type_tag();
 #endif
 };
@@ -276,8 +275,8 @@ class Registration : public Napi::Addon<Registration> {
   std::map<uint64_t, Napi::FunctionReference> classes_;
 };
 
-}  // namespace NapiHelper
+}  // namespace naah
 
-#include "napi_helper_inl.h"
+#include "naah_inl.h"
 
-#endif  // SRC_NAPI_HELPER_H_
+#endif  // SRC_NAAH_H_

@@ -1,12 +1,12 @@
-#ifndef SRC_NAPI_HELPER_INL_H_
-#define SRC_NAPI_HELPER_INL_H_
+#ifndef SRC_NAAH_INL_H_
+#define SRC_NAAH_INL_H_
 
 #include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <variant>
 
-namespace NapiHelper {
+namespace naah {
 
 namespace details {
 
@@ -556,7 +556,7 @@ struct ValueTransformer<std::vector<T>> {
   }
 };
 
-#ifdef NAPI_HELPER_TAG_OBJECT_WRAP
+#ifdef NAAH_TAG_OBJECT_WRAP
 
 template <typename T>
 struct ValueTransformer<T *, std::enable_if_t<std::is_base_of_v<Class, T>>> {
@@ -600,8 +600,8 @@ struct ValueTransformer<T, std::enable_if_t<std::is_base_of_v<Class, T>>> {
 #endif
 
 template <typename E>
-struct ValueTransformer<
-    E, std::enable_if_t<std::is_base_of_v<NapiHelper::Error, E>>> {
+struct ValueTransformer<E,
+                        std::enable_if_t<std::is_base_of_v<naah::Error, E>>> {
  public:
   static Napi::Value ToJS(Napi::Env env, E e) {
     return E::JSError::New(env, e.Message()).Value();
@@ -619,8 +619,8 @@ class TSFNContainer<std::function<void(Args...)>> {
   NAPI_DISALLOW_ASSIGN_COPY(TSFNContainer)
 
   TSFNContainer(Napi::Function fun)
-      : _tsfn(TSFN::New(fun.Env(), fun, "NapiHelper::details::TSFNContainer", 0,
-                        1)) {}
+      : _tsfn(TSFN::New(fun.Env(), fun, "naah::details::TSFNContainer", 0, 1)) {
+  }
 
   ~TSFNContainer() { _tsfn.Release(); }
 
@@ -918,7 +918,7 @@ inline Napi::Function Function::New(Napi::Env env, Callable fn,
 template <typename T>
 inline ScriptWrappable<T>::ScriptWrappable(const Napi::CallbackInfo &info)
     : Napi::ObjectWrap<This>(info) {
-#ifdef NAPI_HELPER_TAG_OBJECT_WRAP
+#ifdef NAAH_TAG_OBJECT_WRAP
   if constexpr (std::is_base_of_v<Class, T>) {
     napi_type_tag_object(info.Env(), info.This(), type_tag());
     if (info[0].IsExternal() &&
@@ -1122,7 +1122,7 @@ ScriptWrappable<T>::StaticAccessor(Napi::Symbol name,
       name, attributes, data);
 }
 
-#ifdef NAPI_HELPER_TAG_OBJECT_WRAP
+#ifdef NAAH_TAG_OBJECT_WRAP
 
 template <typename T>
 inline const napi_type_tag *ScriptWrappable<T>::type_tag() {
@@ -1384,13 +1384,12 @@ inline ObjectRegistration<T> Registration::Object() {
   return ObjectRegistration<T>();
 }
 
-}  // namespace NapiHelper
+}  // namespace naah
 
-#define NAPI_HELPER_EXPORT                                         \
-  using NAPI_HELPER_REGISTRATION_ADDON = NapiHelper::Registration; \
-  NODE_API_ADDON(NAPI_HELPER_REGISTRATION_ADDON)
+#define NAAH_EXPORT                                   \
+  using NAAH_REGISTRATION_ADDON = naah::Registration; \
+  NODE_API_ADDON(NAAH_REGISTRATION_ADDON)
 
-#define NAPI_HELPER_REGISTRATION \
-  NAPI_C_CTOR(napi_helper_auto_register_function_)
+#define NAAH_REGISTRATION NAPI_C_CTOR(napi_helper_auto_register_function_)
 
-#endif  // SRC_NAPI_HELPER_INL_H_
+#endif  // SRC_NAAH_INL_H_

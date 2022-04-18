@@ -1,12 +1,12 @@
-#include <napi_helper.h>
-#include <napi_helper_friend.h>
+#include <naah.h>
+#include <naah_friend.h>
 
 #include <iostream>
 
 namespace {
 uint32_t Add(uint32_t a, uint32_t b) { return a + b; }
 
-class Calculator : public NapiHelper::Class {
+class Calculator : public naah::Class {
   uint32_t _num;
   Calculator(uint32_t num) : _num(num) {}
 
@@ -32,12 +32,12 @@ class Calculator : public NapiHelper::Class {
 
   static Calculator create(uint32_t num) { return Calculator(num); }
 
-  NAPI_HELPER_FRIEND
+  NAAH_FRIEND
 };
 
 uint32_t Calculator::_count = 0;
 
-struct MyObject : NapiHelper::Object {
+struct MyObject : naah::Object {
   std::string str;
   std::optional<uint32_t> num;
 };
@@ -52,8 +52,8 @@ MyObject MyObjectMethod(MyObject input) {
 
 }  // namespace
 
-NAPI_HELPER_REGISTRATION {
-  using reg = NapiHelper::Registration;
+NAAH_REGISTRATION {
+  using reg = naah::Registration;
 
   reg::Value("num", 233);
   reg::Value("str", "hello world");
@@ -75,4 +75,4 @@ NAPI_HELPER_REGISTRATION {
       .StaticAccessor<&Calculator::count>("readonlyCount");
 }
 
-NAPI_HELPER_EXPORT
+NAAH_EXPORT

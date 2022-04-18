@@ -1,12 +1,12 @@
 # Mix with node-addon-api
 
-`node-addon-api-helper` is based on node-addon-api by its name. All Napi values are supported as function arguments and return value.
+**naah** is based on node-addon-api by its name. All Napi values are supported as function arguments and return value.
 
 ## Function
 
-`NapiHelper::Function` helps you to create `Napi::Function` with pure C++ function signature.
+`naah::Function` helps you to create `Napi::Function` with pure C++ function signature.
 
-`NapiHelper::Function::New` behaves like `Napi::Function::New` and returns a `Napi::Function` instance.
+`naah::Function::New` behaves like `Napi::Function::New` and returns a `Napi::Function` instance.
 
 ```cpp
 class Function {
@@ -32,7 +32,7 @@ class Function {
 
 ## ScriptWrappable
 
-`NapiHelper::ScriptWrappable` is a replacement of `Napi::ObjectWrap` which provides a way to bind native class to JavaScript object.
+`naah::ScriptWrappable` is a replacement of `Napi::ObjectWrap` which provides a way to bind native class to JavaScript object.
 
 ```cpp
 template <typename T>
@@ -133,7 +133,7 @@ class ScriptWrappable : public Napi::ObjectWrap<ScriptWrappable<T>> {
       Napi::Symbol name, napi_property_attributes attributes = napi_default,
       void *data = nullptr);
 
-#ifdef NAPI_HELPER_TAG_OBJECT_WRAP
+#ifdef NAAH_TAG_OBJECT_WRAP
   static const napi_type_tag *type_tag();
 #endif
 };
@@ -141,7 +141,7 @@ class ScriptWrappable : public Napi::ObjectWrap<ScriptWrappable<T>> {
 
 ## Registration
 
-`Registration` is the class to store values exported by `NAPI_HELPER_REGISTRATION`.
+`Registration` is the class to store values exported by `NAAH_REGISTRATION`.
 
 ```cpp
 class Registration {
@@ -163,4 +163,4 @@ class Registration {
 };
 ```
 
-If you are not using `NAPI_HELPER_EXPORT` macro to export module. You can use `Registration::ModuleCallback` to get the stored values.
+If you are not using `NAAH_EXPORT` macro to export module. You can use `Registration::ModuleCallback` to get the stored values.

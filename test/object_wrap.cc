@@ -1,7 +1,7 @@
-#include <napi_helper.h>
+#include <naah.h>
 
 namespace {
-class TestObject : public NapiHelper::Class {
+class TestObject : public naah::Class {
  public:
   TestObject(uint32_t num) : _num(num) {}
 
@@ -24,7 +24,7 @@ class TestObject : public NapiHelper::Class {
   static void set_count(uint32_t n) { _count = n; };
 
   static Napi::Function DefineClass(Napi::Env env) {
-    using Wrapped = NapiHelper::ScriptWrappable<TestObject>;
+    using Wrapped = naah::ScriptWrappable<TestObject>;
 
     Napi::Symbol sym = Napi::Symbol::New(env, "sym");
     return Wrapped::DefineClass<uint32_t>(
@@ -52,7 +52,7 @@ class TestObject : public NapiHelper::Class {
 
 uint32_t TestObject::_count = 0;
 
-class AnotherTestObject : public NapiHelper::Class {
+class AnotherTestObject : public naah::Class {
  public:
   AnotherTestObject(const Napi::CallbackInfo&) {}
 
@@ -61,7 +61,7 @@ class AnotherTestObject : public NapiHelper::Class {
   uint32_t GetTestNum(const TestObject* obj) { return obj->num(); }
 
   static Napi::Function DefineClass(Napi::Env env) {
-    using Wrapped = NapiHelper::ScriptWrappable<AnotherTestObject>;
+    using Wrapped = naah::ScriptWrappable<AnotherTestObject>;
 
     return Wrapped::DefineClass<const Napi::CallbackInfo&>(
         env, "AnotherTestObject",

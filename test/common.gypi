@@ -1,5 +1,5 @@
 {
-  'includes': [ '../napi_helper.gypi' ],
+  'includes': [ '../naah.gypi' ],
   'conditions': [
     ['OS=="mac"', {
       'cflags+': [ '-fvisibility=hidden' ],

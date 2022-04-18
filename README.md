@@ -5,7 +5,7 @@
 [![lint](https://github.com/ajihyf/node-addon-api-helper/workflows/lint/badge.svg)](https://github.com/ajihyf/node-addon-api-helper/actions/workflows/lint.yml)
 [![LICENSE](https://img.shields.io/github/license/ajihyf/node-addon-api-helper)](https://github.com/ajihyf/node-addon-api-helper/blob/main/LICENSE)
 
-Based on [node-addon-api](https://github.com/nodejs/node-addon-api), **node-addon-api-helper** provides a more convenient, type-safe and boilerplate-less way to write Node.js C++ addons.
+Based on [node-addon-api](https://github.com/nodejs/node-addon-api), **node-addon-api-helper(naah)** provides a more convenient, type-safe and boilerplate-less way to write Node.js C++ addons.
 
 Features:
 
@@ -36,22 +36,22 @@ Add following content to your GYP file.
 }
 ```
 
-**node-addon-api-helper** heavily depends on **C++17**, if you haven't configured your project on C++17, have a look at [napi_helper.gypi](./napi_helper.gypi) as an example.
+**naah** heavily depends on **C++17**, if you haven't configured your project on C++17, have a look at [naah.gypi](./naah.gypi) as an example.
 
 A hello world example :
 
 ```cpp
-#include <napi_helper.h>
+#include <naah.h>
 
 uint32_t add(uint32_t a, uint32_t b) {
   return a + b;
 }
 
-NAPI_HELPER_REGISTRATION {
-  NapiHelper::Registration::Function<add>("add");
+NAAH_REGISTRATION {
+  naah::Registration::Function<add>("add");
 }
 
-NAPI_HELPER_EXPORT
+NAAH_EXPORT
 ```
 
 ## Documentation

@@ -1,4 +1,4 @@
-#include <napi_helper.h>
+#include <naah.h>
 
 namespace {
 struct CustomStruct {
@@ -28,16 +28,12 @@ auto FnVoidFunction(uint32_t) {
   return std::function([](uint32_t) -> void {});
 }
 
-NapiHelper::Error ErrorFunction() { return NapiHelper::Error("error"); }
-NapiHelper::RangeError RangeErrorFunction() {
-  return NapiHelper::RangeError("error");
-}
-NapiHelper::TypeError TypeErrorFunction() {
-  return NapiHelper::TypeError("error");
-}
+naah::Error ErrorFunction() { return naah::Error("error"); }
+naah::RangeError RangeErrorFunction() { return naah::RangeError("error"); }
+naah::TypeError TypeErrorFunction() { return naah::TypeError("error"); }
 }  // namespace
 
-namespace NapiHelper {
+namespace naah {
 template <>
 struct ValueTransformer<CustomStruct> {
   static std::optional<CustomStruct> FromJS(Napi::Value v) {
@@ -61,31 +57,29 @@ struct ValueTransformer<CustomStruct> {
     return obj;
   }
 };
-}  // namespace NapiHelper
+}  // namespace naah
 
 Napi::Object InitConvert(Napi::Env env) {
   Napi::Object obj = Napi::Object::New(env);
 
   Napi::Number num = Napi::Number::New(env, 42);
-  obj["num"] = NapiHelper::ConvertToJS(
-      env, NapiHelper::ValueTransformer<uint32_t>::FromJS(num));
+  obj["num"] =
+      naah::ConvertToJS(env, naah::ValueTransformer<uint32_t>::FromJS(num));
 
-  obj["hehe"] = NapiHelper::ConvertToJS(env, "hehe");
-  obj["stringView"] =
-      NapiHelper::ConvertToJS(env, std::string_view("stringView"));
+  obj["hehe"] = naah::ConvertToJS(env, "hehe");
+  obj["stringView"] = naah::ConvertToJS(env, std::string_view("stringView"));
   obj["u16stringView"] =
-      NapiHelper::ConvertToJS(env, std::u16string_view(u"u16stringView"));
+      naah::ConvertToJS(env, std::u16string_view(u"u16stringView"));
 
-  obj["customMethod"] = NapiHelper::Function::New<CustomMethod>(env);
+  obj["customMethod"] = naah::Function::New<CustomMethod>(env);
 
-  obj["fnLambda"] = NapiHelper::Function::New<FnLambda>(env);
-  obj["fnFunction"] = NapiHelper::Function::New<FnFunction>(env);
+  obj["fnLambda"] = naah::Function::New<FnLambda>(env);
+  obj["fnFunction"] = naah::Function::New<FnFunction>(env);
 
-  obj["errorFunction"] = NapiHelper::Function::New<ErrorFunction>(env);
-  obj["rangeErrorFunction"] =
-      NapiHelper::Function::New<RangeErrorFunction>(env);
-  obj["typeErrorFunction"] = NapiHelper::Function::New<TypeErrorFunction>(env);
-  obj["fnVoidFunction"] = NapiHelper::Function::New<FnVoidFunction>(env);
+  obj["errorFunction"] = naah::Function::New<ErrorFunction>(env);
+  obj["rangeErrorFunction"] = naah::Function::New<RangeErrorFunction>(env);
+  obj["typeErrorFunction"] = naah::Function::New<TypeErrorFunction>(env);
+  obj["fnVoidFunction"] = naah::Function::New<FnVoidFunction>(env);
 
   return obj;
 }

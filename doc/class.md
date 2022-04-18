@@ -1,19 +1,19 @@
 # Class
 
-To export a class `T`, inherit `NapiHelper::Class` and use `NapiHelper::Registration::Class` to register class with methods.
+To export a class `T`, inherit `naah::Class` and use `naah::Registration::Class` to register class with methods.
 
 ## Constructor
 
 Since it's impossible to get the address of a C++ constructor, you need to specify constructor arguments explicitly :
 
 ```cpp
-class A: public NapiHelper::Class {
+class A: public naah::Class {
  public:
   A(uint32_t, std::string);
 };
 
-NAPI_HELPER_REGISTRATION {
-  using reg = NapiHelper::Registration;
+NAAH_REGISTRATION {
+  using reg = naah::Registration;
 
   reg::Class<A, uint32_t, std::string>("A");
 }
@@ -27,8 +27,8 @@ class A {
   void hello();
 };
 
-NAPI_HELPER_REGISTRATION {
-  using reg = NapiHelper::Registration;
+NAAH_REGISTRATION {
+  using reg = naah::Registration;
 
   reg::Class<A>("A")
       .InstanceMethod<&A::hello>("hello");
@@ -44,8 +44,8 @@ class A {
   void set_num(uint32_t);
 };
 
-NAPI_HELPER_REGISTRATION {
-  using reg = NapiHelper::Registration;
+NAAH_REGISTRATION {
+  using reg = naah::Registration;
 
   reg::Class<A>("A")
       .InstanceAccessor<&A::num, &A::set_num>("num");
@@ -60,8 +60,8 @@ class A {
   static void hello();
 };
 
-NAPI_HELPER_REGISTRATION {
-  using reg = NapiHelper::Registration;
+NAAH_REGISTRATION {
+  using reg = naah::Registration;
 
   reg::Class<A>("A")
       .StaticMethod<&A::hello>("hello");
@@ -77,8 +77,8 @@ class A {
   static void set_num(uint32_t);
 };
 
-NAPI_HELPER_REGISTRATION {
-  using reg = NapiHelper::Registration;
+NAAH_REGISTRATION {
+  using reg = naah::Registration;
 
   reg::Class<A>("A")
       .StaticAccessor<&A::num, &A::set_num>("num");
@@ -90,12 +90,12 @@ NAPI_HELPER_REGISTRATION {
 To export private methods :
 
 ```cpp
-#include <napi_helper_friend.h>
+#include <naah_friend.h>
 
 class A {
   void privateMethod();
 
-  NAPI_HELPER_FRIEND
+  NAAH_FRIEND
 };
 ```
 
@@ -104,13 +104,13 @@ class A {
 Exported class object can also be function arguments and return value. This feature is supported for NAPI_VERSION >= 8.
 
 ```cpp
-class Foo : public NapiHelper::Class {
+class Foo : public naah::Class {
  public:
   Foo(uint32_t num);
   uint32_t num;
 };
 
-class Bar : public NapiHelper::Class {
+class Bar : public naah::Class {
  public:
   Foo NewFoo(Foo* foo, uint32_t num) {
     return Foo(foo->num + num);

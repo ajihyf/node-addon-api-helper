@@ -2,12 +2,12 @@
 
 ## With C++ Exception
 
-When C++ exception is enabled, throw `NapiHelper::{Error, RangeError, TypeError}` directly in your C++ code.
+When C++ exception is enabled, throw `naah::{Error, RangeError, TypeError}` directly in your C++ code.
 
 ```cpp
 uint32_t TestNum(uint32_t num) {
   if (num < 10) {
-    throw NapiHelper::RangeError("num too small");
+    throw naah::RangeError("num too small");
   }
   return num - 10;
 }
@@ -35,7 +35,7 @@ You can try this approach.
 First, add a template specification :
 
 ```cpp
-namespace NapiHelper {
+namespace naah {
 template <typename T, typename E>
 struct ValueTransformer<std::expected<T, E>> {
   static Napi::Value ToJS(Napi::Env env, const std::expected<T, E> &v) {
@@ -52,9 +52,9 @@ struct ValueTransformer<std::expected<T, E>> {
 Then you can return a `std::expected` value.
 
 ```cpp
-std::expected<uint32_t, NapiHelper::RangeError> TestNum(uint32_t num) {
+std::expected<uint32_t, naah::RangeError> TestNum(uint32_t num) {
   if (num < 10) {
-    return NapiHelper::RangeError("num too small");
+    return naah::RangeError("num too small");
   }
   return num - 10;
 }

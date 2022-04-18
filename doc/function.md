@@ -1,13 +1,13 @@
 # Function
 
-Write function in pure C++ and export it as JavaScript function with `NapiHelper::Registration::Function`.
+Write function in pure C++ and export it as JavaScript function with `naah::Registration::Function`.
 
-**node-addon-api-helper** will take care of value transformation between C++ and JavaScript (see [ValueTransformer](./value_transformer.md) for details).
+**naah** will take care of value transformation between C++ and JavaScript (see [ValueTransformer](./value_transformer.md) for details).
 
 If any type mismatch occurs, a `TypeError` will be thrown automatically.
 
 ```cpp
-#include <napi_helper.h>
+#include <naah.h>
 
 namespace {
 
@@ -15,15 +15,15 @@ std::string helloWorld(std::string str) { return str + " world"; }
 
 }  // namespace
 
-NAPI_HELPER_REGISTRATION {
-  using reg = NapiHelper::Registration;
+NAAH_REGISTRATION {
+  using reg = naah::Registration;
   // lambda is supported
   reg::Function("add",
                 [](uint32_t a, uint32_t b) -> uint32_t { return a + b; });
   reg::Function<helloWorld>("helloWorld");
 }
 
-NAPI_HELPER_EXPORT
+NAAH_EXPORT
 ```
 
 In JavaScript land :
@@ -40,8 +40,8 @@ Supported argument types :
 
 | C++                                               | JavaScript                                |
 | ------------------------------------------------- | ----------------------------------------- |
-| NapiHelper::Undefined                             | undefined                                 |
-| NapiHelper::Null                                  | null                                      |
+| naah::Undefined                                   | undefined                                 |
+| naah::Null                                        | null                                      |
 | bool                                              | boolean                                   |
 | [u]int[8,16,32]\_t                                | number                                    |
 | [u]int64_t                                        | BigInt                                    |
@@ -53,8 +53,8 @@ Supported argument types :
 | std::optional\<T>                                 | T \| undefined                            |
 | std::tuple\<T1, T2, ...>                          | [T1, T2, ...]                             |
 | Napi::{Object, Array, Function, TypedArray, etc.} | Object, Array, Function, TypedArray, etc. |
-| T (inherits [NapiHelper::Object](./object.md))    | object of interface T                     |
-| T\* (inherits [NapiHelper::Class](./class.md))    | instance of class T                       |
+| T (inherits [naah::Object](./object.md))          | object of interface T                     |
+| T\* (inherits [naah::Class](./class.md))          | instance of class T                       |
 
 `std::function<void(Args...)>` arguments are [Thread Safe Functions](./thread_safe_function.md), they are safe to call in any thread.
 
@@ -64,8 +64,8 @@ Supported return types :
 
 | C++                                                 | JavaScript                                |
 | --------------------------------------------------- | ----------------------------------------- |
-| NapiHelper::Undefined, void                         | undefined                                 |
-| NapiHelper::Null                                    | null                                      |
+| naah::Undefined, void                               | undefined                                 |
+| naah::Null                                          | null                                      |
 | bool                                                | boolean                                   |
 | [u]int[8,16,32]\_t                                  | number                                    |
 | [u]int64_t                                          | BigInt                                    |
@@ -78,20 +78,20 @@ Supported return types :
 | std::optional\<T>                                   | T \| undefined                            |
 | std::tuple\<T1, T2, ...>                            | [T1, T2, ...]                             |
 | Napi::{Object, Array, Function, TypedArray, etc.}   | Object, Array, Function, TypedArray, etc. |
-| NapiHelper::{Error, RangeError, TypeError}          | Error, RangeError, TypeError              |
-| T (inherits [NapiHelper::Object](./object.md))      | object of interface T                     |
-| T (inherits [NapiHelper::Class](./class.md))        | instance of class T                       |
+| naah::{Error, RangeError, TypeError}                | Error, RangeError, TypeError              |
+| T (inherits [naah::Object](./object.md))            | object of interface T                     |
+| T (inherits [naah::Class](./class.md))              | instance of class T                       |
 
 `const char*`, `std::string_view` and `std::u16string_view` return values are preferred than `std::string` and `std::u16string` since there is no unnecessary copy.
 
-`NapiHelper::{Error, RangeError, TypeError}` return values will be transformed to JavaScript error values.
+`naah::{Error, RangeError, TypeError}` return values will be transformed to JavaScript error values.
 But there is no JavaScript exception thrown implicitly. To throw exceptions, see [Error Handling](./error_handling.md).
 
 ## Inject CallbackInfo
 
 In some cases, you may want to access JavaScript land in native functions.
 
-For this scenario, declare the first argument type as `const Napi::CallbackInfo&`, **node-addon-api-helper** will automatically inject it.
+For this scenario, declare the first argument type as `const Napi::CallbackInfo&`, **naah** will automatically inject it.
 
 ```cpp
 uint32_t addArgsLength(const Napi::CallbackInfo& info, uint32_t num) {
