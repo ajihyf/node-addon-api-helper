@@ -8,7 +8,7 @@ To create work without return value, use `naah::AsyncWork<void>` :
 
 ```cpp
 naah::AsyncWork<void> AsyncWorker(uint32_t sleep,
-                                        std::function<void()> cb) {
+                                  std::function<void()> cb) {
   return [sleep, cb = std::move(cb)] {
     std::this_thread::sleep_for(std::chrono::milliseconds(sleep));
     cb();

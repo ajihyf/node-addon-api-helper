@@ -241,8 +241,21 @@ struct ValueTransformer<Napi::Int8Array>
     : public TypedArrayTransformer<Napi::Int8Array, napi_int8_array> {};
 
 template <>
-struct ValueTransformer<Napi::Uint8Array>
-    : public TypedArrayTransformer<Napi::Uint8Array, napi_uint8_array> {};
+struct ValueTransformer<Napi::Uint8Array> {
+  static std::optional<Napi::Uint8Array> FromJS(Napi::Value value) {
+    if (!value.IsTypedArray()) {
+      return {};
+    }
+    Napi::TypedArray arr = value.As<Napi::TypedArray>();
+    if (arr.TypedArrayType() != napi_uint8_array &&
+        arr.TypedArrayType() != napi_uint8_clamped_array) {
+      return {};
+    }
+    return value.As<Napi::Uint8Array>();
+  }
+
+  static Napi::Value ToJS(Napi::Env, Napi::Uint8Array val) { return val; }
+};
 
 template <>
 struct ValueTransformer<Napi::Int16Array>
@@ -553,6 +566,56 @@ struct ValueTransformer<std::vector<T>> {
       result.Set(i, ValueTransformer<T>::ToJS(env, std::move(arr[i])));
     }
     return result;
+  }
+};
+
+template <>
+struct ValueTransformer<ArrayBuffer> {
+  static std::optional<ArrayBuffer> FromJS(Napi::Value value) {
+    if (!value.IsArrayBuffer()) {
+      return {};
+    }
+    Napi::ArrayBuffer buf = value.As<Napi::ArrayBuffer>();
+    return ArrayBuffer(static_cast<char *>(buf.Data()),
+                       static_cast<char *>(buf.Data()) + buf.ByteLength());
+  }
+
+  static Napi::Value ToJS(Napi::Env env, ArrayBuffer arr) {
+    ArrayBuffer *arr_ptr = new ArrayBuffer(std::move(arr));
+    return Napi::ArrayBuffer::New(
+        env, arr_ptr->data(), arr_ptr->size(),
+        [](napi_env, void *, void *hint) {
+          delete static_cast<ArrayBuffer *>(hint);
+        },
+        arr_ptr);
+  }
+};
+
+template <typename E, napi_typedarray_type type>
+struct ValueTransformer<TypedArrayOf<E, type>> {
+ private:
+  using T = TypedArrayOf<E, type>;
+
+ public:
+  static std::optional<T> FromJS(Napi::Value value) {
+    if (!value.IsTypedArray()) {
+      return {};
+    }
+    Napi::TypedArray arr = value.As<Napi::TypedArray>();
+    if (arr.TypedArrayType() != type) {
+      return {};
+    }
+    Napi::TypedArrayOf<E> typed_arr = arr.As<Napi::TypedArrayOf<E>>();
+    return T(typed_arr->Data(), typed_arr->Data() + typed_arr->Length());
+  }
+
+  static Napi::Value ToJS(Napi::Env env, T arr) {
+    T *arr_ptr = new T(std::move(arr));
+    Napi::ArrayBuffer buf = Napi::ArrayBuffer::New(
+        env, arr_ptr->data(), arr_ptr->size() * sizeof(T),
+        [](napi_env, void *, void *hint) { delete static_cast<T *>(hint); },
+        arr_ptr);
+    return Napi::TypedArrayOf<E>::New(env, arr_ptr->size(), buf, 0, type);
   }
 };
 

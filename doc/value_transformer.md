@@ -10,14 +10,9 @@ struct ValueTransformer {
   static Napi::Value ToJS(Napi::Env, const T &);
 };
 
-// There is also a helper struct `Convert`
-struct Convert {
-  template <typename T>
-  static std::optional<T> FromJS(Napi::Value v);
-
-  template <typename T>
-  static Napi::Value ToJS(Napi::Env env, const T &v);
-};
+// There is also a helper function `ConvertToJS`
+template <typename T>
+Napi::Value ConvertToJS(Napi::Env env, T v);
 ```
 
 - All `T` which has a template specification of `ValueTransformer<T>::FromJS` could be treated as function arguments.

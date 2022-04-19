@@ -49,6 +49,22 @@ PromiseWorkerWithReject(uint32_t num) {
     return num + 42;
   };
 }
+
+naah::AsyncWork<void> AsyncArrayBuffer(
+    uint32_t length, std::function<void(naah::ArrayBuffer)> cb) {
+  return [length, cb = std::move(cb)] { cb(naah::ArrayBuffer(length)); };
+}
+
+naah::AsyncWork<void> AsyncTypedArray(
+    uint32_t length, std::function<void(naah::Uint16Array)> cb) {
+  return [length, cb = std::move(cb)] {
+    naah::Uint16Array arr(length);
+    for (uint32_t i = 0; i < length; i++) {
+      arr[i] = i;
+    }
+    cb(std::move(arr));
+  };
+}
 }  // namespace
 
 Napi::Object InitMultithread(Napi::Env env) {
@@ -61,6 +77,9 @@ Napi::Object InitMultithread(Napi::Env env) {
   obj["promiseWorker"] = naah::Function::New<PromiseWorker>(env);
   obj["promiseWorkerWithReject"] =
       naah::Function::New<PromiseWorkerWithReject>(env);
+
+  obj["asyncArrayBuffer"] = naah::Function::New<AsyncArrayBuffer>(env);
+  obj["asyncTypedArray"] = naah::Function::New<AsyncTypedArray>(env);
 
   return obj;
 }

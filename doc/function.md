@@ -52,11 +52,20 @@ Supported argument types :
 | std::variant\<T1, T2, ...>                        | T1 \| T2 \| ...                           |
 | std::optional\<T>                                 | T \| undefined                            |
 | std::tuple\<T1, T2, ...>                          | [T1, T2, ...]                             |
-| Napi::{Object, Array, Function, TypedArray, etc.} | Object, Array, Function, TypedArray, etc. |
+| naah::{Int8Array, Uint8Array, etc.}               | Int8Array, Uint8Array                     |
 | T (inherits [naah::Object](./object.md))          | object of interface T                     |
 | T\* (inherits [naah::Class](./class.md))          | instance of class T                       |
+| Napi::{Object, Array, Function, TypedArray, etc.} | Object, Array, Function, TypedArray, etc. |
 
 `std::function<void(Args...)>` arguments are [Thread Safe Functions](./thread_safe_function.md), they are safe to call in any thread.
+
+### Difference between C++ values and JavaScript values
+
+`T*` and `Napi::...` are **JavaScript** values. Which means their lifetimes are managed by JavaScript VM. You should never pass or access them out of JavaScript call stack.
+
+All other types are pure C++. Their contents are copied from JavaScript values, which means they are safe to use out of JavaScript stack.
+
+In most cases, you should use C++ values. Except for the scenario you want to access JavaScript contents in place, for example, set a key to an input object, change input TypedArray data, access input TypedArray data without copy, etc.
 
 ## Return Type
 
@@ -77,15 +86,13 @@ Supported return types :
 | std::variant\<T1, T2, ...>                          | T1 \| T2 \| ...                           |
 | std::optional\<T>                                   | T \| undefined                            |
 | std::tuple\<T1, T2, ...>                            | [T1, T2, ...]                             |
-| Napi::{Object, Array, Function, TypedArray, etc.}   | Object, Array, Function, TypedArray, etc. |
+| naah::{Int8Array, Uint8Array, etc.}                 | Int8Array, Uint8Array                     |
 | naah::{Error, RangeError, TypeError}                | Error, RangeError, TypeError              |
 | T (inherits [naah::Object](./object.md))            | object of interface T                     |
 | T (inherits [naah::Class](./class.md))              | instance of class T                       |
+| Napi::{Object, Array, Function, TypedArray, etc.}   | Object, Array, Function, TypedArray, etc. |
 
-`const char*`, `std::string_view` and `std::u16string_view` return values are preferred than `std::string` and `std::u16string` since there is no unnecessary copy.
-
-`naah::{Error, RangeError, TypeError}` return values will be transformed to JavaScript error values.
-But there is no JavaScript exception thrown implicitly. To throw exceptions, see [Error Handling](./error_handling.md).
+`naah::{Error, RangeError, TypeError}` will be transformed to JavaScript error values as return value. To throw exceptions, see [Error Handling](./error_handling.md).
 
 ## Inject CallbackInfo
 

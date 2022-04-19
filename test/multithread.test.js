@@ -43,4 +43,20 @@ describe('multithread', () => {
       done()
     })
   })
+
+  it('async arraybuffer', done => {
+    multithread.asyncArrayBuffer(5, (buf) => {
+      expect(buf).to.be.instanceOf(ArrayBuffer)
+      expect(buf.byteLength).to.eq(5)
+      done()
+    })
+  })
+
+  it('async typed array', done => {
+    multithread.asyncTypedArray(5, (arr) => {
+      expect(arr).to.be.instanceOf(Uint16Array)
+      expect(arr).to.eql(new Uint16Array([0, 1, 2, 3, 4]))
+      done()
+    })
+  })
 })

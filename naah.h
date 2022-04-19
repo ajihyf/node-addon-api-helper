@@ -50,6 +50,37 @@ Napi::Value ConvertToJS(Napi::Env env, T v);
 struct Undefined {};
 struct Null {};
 
+class ArrayBuffer : public std::vector<char> {
+ private:
+  using Super = std::vector<char>;
+
+ public:
+  using Super::Super;
+};
+
+template <typename E, napi_typedarray_type napi_type>
+class TypedArrayOf : public std::vector<E> {
+ private:
+  using Super = std::vector<E>;
+
+ public:
+  using Super::Super;
+};
+
+using Uint8Array = TypedArrayOf<uint8_t, napi_uint8_array>;
+using Uint8ClampedArray = TypedArrayOf<uint8_t, napi_uint8_clamped_array>;
+using Int8Array = TypedArrayOf<int8_t, napi_int8_array>;
+using Uint16Array = TypedArrayOf<uint16_t, napi_uint16_array>;
+using Int16Array = TypedArrayOf<int16_t, napi_int16_array>;
+using Uint32Array = TypedArrayOf<uint32_t, napi_uint32_array>;
+using Int32Array = TypedArrayOf<int32_t, napi_int32_array>;
+using Float32Array = TypedArrayOf<float, napi_float32_array>;
+using Float64Array = TypedArrayOf<double, napi_float64_array>;
+#if NAPI_VERSION > 5
+using BigUint64Array = TypedArrayOf<uint64_t, napi_biguint64_array>;
+using BigInt64Array = TypedArrayOf<int64_t, napi_bigint64_array>;
+#endif
+
 class Error :
 #ifdef NAPI_CPP_EXCEPTIONS
     public std::exception
