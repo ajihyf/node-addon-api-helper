@@ -60,17 +60,20 @@ class ScriptWrappable : public Napi::ObjectWrap<ScriptWrappable<T>> {
 
   T &wrapped() const;
 
+  using ConstructFn = std::unique_ptr<T> (*)(const Napi::CallbackInfo &);
+
   using PropertyDescriptor =
       typename Napi::ObjectWrap<This>::PropertyDescriptor;
 
-  template <typename... CtorArgs>
+  template <typename... Args>
+  static std::unique_ptr<T> ConstructCallback(const Napi::CallbackInfo &);
+
   static Napi::Function DefineClass(
-      Napi::Env env, const char *utf8name,
+      Napi::Env env, const char *utf8name, ConstructFn ctor_fn,
       const std::initializer_list<PropertyDescriptor> &properties);
 
-  template <typename... CtorArgs>
   static Napi::Function DefineClass(
-      Napi::Env env, const char *utf8name,
+      Napi::Env env, const char *utf8name, ConstructFn ctor_fn,
       const std::vector<PropertyDescriptor> &properties);
 
   template <auto T::*fn>

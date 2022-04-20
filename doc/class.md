@@ -15,9 +15,13 @@ class A : public naah::Class {
 NAAH_REGISTRATION {
   using reg = naah::Registration;
 
-  reg::Class<A, uint32_t, std::string>("A");
+  reg::Class<A>("A")
+      .Constructor<uint32_t, std::string>();
 }
 ```
+
+If no constructor is specified, calling new on this class will throw an JavaScript Error.
+But you can still create the object directly in C++(like factory pattern), see [Class as Argument](#class-as-argument) for details.
 
 ## InstanceMethod
 

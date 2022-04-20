@@ -962,16 +962,6 @@ class Invoker {
     return CallJS(info, fn);
   }
 
-  template <typename T>
-  using ConstructFn = std::unique_ptr<T> (*)(const Napi::CallbackInfo &);
-
-  template <typename T, typename... CtorArgs>
-  static std::unique_ptr<T> Construct(const Napi::CallbackInfo &info) {
-    return Call(info, [](CtorArgs... args) -> std::unique_ptr<T> {
-      return std::unique_ptr<T>(new T(std::move(args)...));
-    });
-  }
-
   template <class T, typename Ret, typename... Args>
   static auto InstanceCall(T *c, Ret (T::*m)(Args...)) {
     return [=](Args... args) -> Ret { return (c->*m)(std::move(args)...); };
@@ -1030,7 +1020,11 @@ inline ScriptWrappable<T>::ScriptWrappable(const Napi::CallbackInfo &info)
   }
 #endif
 
-  auto t_ctor = reinterpret_cast<details::Invoker::ConstructFn<T>>(info.Data());
+  auto t_ctor = reinterpret_cast<ConstructFn>(info.Data());
+
+  if (t_ctor == nullptr) {
+    NAPI_THROW(Napi::Error::New(info.Env()), "not constructible by new");
+  }
 
   _wrapped = t_ctor(info);
 }
@@ -1041,30 +1035,32 @@ inline T &ScriptWrappable<T>::wrapped() const {
 }
 
 template <typename T>
-template <typename... CtorArgs>
-Napi::Function ScriptWrappable<T>::DefineClass(
-    Napi::Env env, const char *utf8name,
+inline Napi::Function ScriptWrappable<T>::DefineClass(
+    Napi::Env env, const char *utf8name, ConstructFn fn,
     const std::initializer_list<PropertyDescriptor> &properties) {
   using Wrapped = Napi::ObjectWrap<This>;
 
-  details::Invoker::ConstructFn<T> fn =
-      details::Invoker::Construct<T, CtorArgs...>;
   return Wrapped::DefineClass(env, utf8name, properties,
                               reinterpret_cast<void *>(fn));
 }
 
 template <typename T>
-template <typename... CtorArgs>
-Napi::Function ScriptWrappable<T>::DefineClass(
-    Napi::Env env, const char *utf8name,
+inline Napi::Function ScriptWrappable<T>::DefineClass(
+    Napi::Env env, const char *utf8name, ConstructFn fn,
     const std::vector<PropertyDescriptor> &properties) {
   using Wrapped = Napi::ObjectWrap<This>;
 
-  details::Invoker::ConstructFn<T> fn =
-      details::Invoker::Construct<T, CtorArgs...>;
-
   return Wrapped::DefineClass(env, utf8name, properties,
                               reinterpret_cast<void *>(fn));
+}
+
+template <typename T>
+template <typename... Args>
+inline std::unique_ptr<T> ScriptWrappable<T>::ConstructCallback(
+    const Napi::CallbackInfo &info) {
+  return details::Invoker::Call(info, [](Args... args) -> std::unique_ptr<T> {
+    return std::unique_ptr<T>(new T(std::move(args)...));
+  });
 }
 
 template <typename T>
@@ -1258,30 +1254,39 @@ struct ClassRegistrationEntry {
 template <typename T>
 class ClassRegistration {
  private:
-  static std::vector<typename ScriptWrappable<T>::PropertyDescriptor>
-      &descriptors() {
-    static std::vector<typename ScriptWrappable<T>::PropertyDescriptor>
-        descriptors_;
-    return descriptors_;
+  const char *_name = nullptr;
+  typename ScriptWrappable<T>::ConstructFn _ctor_fn = nullptr;
+  std::vector<typename ScriptWrappable<T>::PropertyDescriptor> _descriptors;
+
+  static ClassRegistration &Instance() {
+    static ClassRegistration instance;
+    return instance;
   }
 
-  template <typename... CtorArgs>
   static Napi::Function DefineClassCallback(Napi::Env env, const char *name) {
-    return ScriptWrappable<T>::template DefineClass<CtorArgs...>(env, name,
-                                                                 descriptors());
+    ClassRegistration &instance = Instance();
+
+    return ScriptWrappable<T>::DefineClass(env, name, instance._ctor_fn,
+                                           instance._descriptors);
   }
 
  public:
-  template <typename... CtorArgs>
-  static void DefineClass(const char *name) {
-    ClassRegistrationEntry::Entries().push_back(
-        ClassRegistrationEntry{name, ScriptWrappable<T>::type_tag()->lower,
-                               DefineClassCallback<CtorArgs...>});
+  static void DefineClass() {
+    ClassRegistration &instance = Instance();
+    ClassRegistrationEntry::Entries().push_back(ClassRegistrationEntry{
+        instance._name, ScriptWrappable<T>::type_tag()->lower,
+        DefineClassCallback});
   }
 
   static void AddPropertyDescriptor(
       typename ScriptWrappable<T>::PropertyDescriptor descriptor) {
-    descriptors().push_back(std::move(descriptor));
+    Instance()._descriptors.push_back(std::move(descriptor));
+  }
+
+  static void SetName(const char *name) { Instance()._name = name; }
+
+  static void SetConstructor(typename ScriptWrappable<T>::ConstructFn fn) {
+    Instance()._ctor_fn = fn;
   }
 };
 }  // namespace details
@@ -1330,10 +1335,24 @@ inline void Registration::Function(const char *name, Callable callable,
        }});
 }
 
-template <typename T, typename... CtorArgs>
+template <typename T>
 inline ClassRegistration<T> Registration::Class(const char *name) {
-  details::ClassRegistration<T>::template DefineClass<CtorArgs...>(name);
+  details::ClassRegistration<T>::SetName(name);
   return ClassRegistration<T>();
+}
+
+template <typename T>
+inline ClassRegistration<T>::~ClassRegistration() {
+  details::ClassRegistration<T>::DefineClass();
+}
+
+template <typename T>
+template <typename... CtorArgs>
+inline ClassRegistration<T> &ClassRegistration<T>::Constructor() {
+  details::ClassRegistration<T>::SetConstructor(
+      ScriptWrappable<T>::template ConstructCallback<CtorArgs...>);
+
+  return *this;
 }
 
 template <typename T>

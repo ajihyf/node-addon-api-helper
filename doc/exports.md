@@ -40,7 +40,7 @@ For more information about function exports, see [Function](./function.md).
 ## Class
 
 ```cpp
-class Calculator {
+class Calculator : naah::Class {
  public:
   uint32_t _num;
   Calculator(uint32_t num): _num(num) {}
@@ -52,7 +52,8 @@ class Calculator {
 NAAH_REGISTRATION {
   using reg = naah::Registration;
 
-  reg::Class<Calculator, uint32_t>("Calculator")
+  reg::Class<Calculator>("Calculator")
+      .Constructor<uint32_t>()
       .InstanceMethod<&Calculator::add>("add")
 }
 ```

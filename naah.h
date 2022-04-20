@@ -157,17 +157,20 @@ class ScriptWrappable : public Napi::ObjectWrap<ScriptWrappable<T>> {
 
   T &wrapped() const;
 
+  using ConstructFn = std::unique_ptr<T> (*)(const Napi::CallbackInfo &);
+
   using PropertyDescriptor =
       typename Napi::ObjectWrap<This>::PropertyDescriptor;
 
-  template <typename... CtorArgs>
+  template <typename... Args>
+  static std::unique_ptr<T> ConstructCallback(const Napi::CallbackInfo &);
+
   static Napi::Function DefineClass(
-      Napi::Env env, const char *utf8name,
+      Napi::Env env, const char *utf8name, ConstructFn ctor_fn,
       const std::initializer_list<PropertyDescriptor> &properties);
 
-  template <typename... CtorArgs>
   static Napi::Function DefineClass(
-      Napi::Env env, const char *utf8name,
+      Napi::Env env, const char *utf8name, ConstructFn ctor_fn,
       const std::vector<PropertyDescriptor> &properties);
 
   template <auto T::*fn>
@@ -240,6 +243,11 @@ struct Class {};
 template <typename T>
 class ClassRegistration {
  public:
+  ~ClassRegistration();
+
+  template <typename... CtorArgs>
+  ClassRegistration<T> &Constructor();
+
   template <auto T::*fn>
   ClassRegistration<T> &InstanceMethod(
       const char *name, napi_property_attributes attributes = napi_default,
@@ -292,7 +300,7 @@ class Registration : public Napi::Addon<Registration> {
   static void Function(const char *name, Callable callable,
                        void *data = nullptr);
 
-  template <typename T, typename... CtorArgs>
+  template <typename T>
   static ClassRegistration<T> Class(const char *name);
 
   template <typename T>

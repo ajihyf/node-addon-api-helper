@@ -27,8 +27,8 @@ class TestObject : public naah::Class {
     using Wrapped = naah::ScriptWrappable<TestObject>;
 
     Napi::Symbol sym = Napi::Symbol::New(env, "sym");
-    return Wrapped::DefineClass<uint32_t>(
-        env, "TestObject",
+    return Wrapped::DefineClass(
+        env, "TestObject", Wrapped::ConstructCallback<uint32_t>,
         {Wrapped::StaticValue("sym", sym),
          Wrapped::StaticMethod<TestObject::AddStatic>("add"),
          Wrapped::StaticAccessor<TestObject::count>("readonlyCount"),
@@ -63,8 +63,9 @@ class AnotherTestObject : public naah::Class {
   static Napi::Function DefineClass(Napi::Env env) {
     using Wrapped = naah::ScriptWrappable<AnotherTestObject>;
 
-    return Wrapped::DefineClass<const Napi::CallbackInfo&>(
+    return Wrapped::DefineClass(
         env, "AnotherTestObject",
+        Wrapped::ConstructCallback<const Napi::CallbackInfo&>,
         {Wrapped::InstanceMethod<&AnotherTestObject::AddTest>("addTest"),
          Wrapped::InstanceMethod<&AnotherTestObject::GetTestNum>(
              "getTestNum")});

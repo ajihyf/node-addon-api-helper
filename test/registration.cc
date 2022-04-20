@@ -50,6 +50,12 @@ MyObject MyObjectMethod(MyObject input) {
                       : std::nullopt};
 }
 
+class FactorOnlyObject : naah::Class {
+  static FactorOnlyObject create() { return FactorOnlyObject(); }
+
+  NAAH_FRIEND
+};
+
 }  // namespace
 
 NAAH_REGISTRATION {
@@ -65,7 +71,8 @@ NAAH_REGISTRATION {
       "str");
   reg::Function<MyObjectMethod>("myObjectMethod");
 
-  reg::Class<Calculator, uint32_t>("Calculator")
+  reg::Class<Calculator>("Calculator")
+      .Constructor<uint32_t>()
       .InstanceMethod<&Calculator::add>("add")
       .InstanceAccessor<&Calculator::num, &Calculator::set_num>("num")
       .InstanceAccessor<&Calculator::num>("readonlyNum")
@@ -73,6 +80,9 @@ NAAH_REGISTRATION {
       .StaticMethod<&Calculator::create>("create")
       .StaticAccessor<&Calculator::count, &Calculator::set_count>("count")
       .StaticAccessor<&Calculator::count>("readonlyCount");
+
+  reg::Class<FactorOnlyObject>("FactorOnlyObject")
+      .StaticMethod<&FactorOnlyObject::create>("create");
 }
 
 NAAH_EXPORT

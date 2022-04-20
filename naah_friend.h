@@ -9,8 +9,9 @@ class Invoker;
 
 static void napi_helper_auto_register_function_();
 
-#define NAAH_FRIEND                    \
-  friend class naah::details::Invoker; \
+#define NAAH_FRIEND                   \
+  template <typename T>               \
+  friend class naah::ScriptWrappable; \
   friend void ::napi_helper_auto_register_function_();
 
 #endif  // SRC_NAAH_FRIEND_H_

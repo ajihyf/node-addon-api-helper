@@ -63,4 +63,9 @@ describe('Registration', () => {
     expect(calculator.num).to.eq(1)
     expect(calculator.add(2)).to.eq(3)
   })
+
+  it('throws error for new in factory only class', () => {
+    expect(() => new binding.FactorOnlyObject()).to.throw()
+    expect(binding.FactorOnlyObject.create()).to.be.instanceOf(binding.FactorOnlyObject)
+  })
 })
