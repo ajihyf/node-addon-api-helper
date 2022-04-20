@@ -1023,7 +1023,7 @@ inline ScriptWrappable<T>::ScriptWrappable(const Napi::CallbackInfo &info)
   auto t_ctor = reinterpret_cast<ConstructFn>(info.Data());
 
   if (t_ctor == nullptr) {
-    NAPI_THROW(Napi::Error::New(info.Env()), "not constructible by new");
+    NAPI_THROW_VOID(Napi::Error::New(info.Env(), "not constructible by new"));
   }
 
   _wrapped = t_ctor(info);
