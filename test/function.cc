@@ -179,6 +179,8 @@ std::variant<uint32_t, std::string> FunctionWithVariants(
   return std::visit(Visitor(), input);
 }
 
+#ifdef NAPI_CPP_EXCEPTIONS
+
 std::string FunctionThrows(uint32_t i) {
   if (i > 42) {
     throw naah::RangeError("bigger than 42");
@@ -186,23 +188,16 @@ std::string FunctionThrows(uint32_t i) {
   return std::to_string(i);
 }
 
-std::optional<std::string> FunctionThrowsManually(
-    const Napi::CallbackInfo &info, uint32_t i) {
-  if (i > 233) {
-    Napi::RangeError::New(info.Env(), "bigger than 233")
-        .ThrowAsJavaScriptException();
-    return {};
+#else
+
+naah::Result<std::string, naah::RangeError> FunctionThrows(uint32_t i) {
+  if (i > 42) {
+    return naah::RangeError("bigger than 42");
   }
   return std::to_string(i);
 }
 
-naah::Result<std::string, naah::RangeError> FunctionThrowsWithResult(
-    uint32_t i) {
-  if (i > 233) {
-    return naah::RangeError("bigger than 233");
-  }
-  return std::to_string(i);
-}
+#endif
 }  // namespace
 
 Napi::Object InitFunction(Napi::Env env) {
@@ -283,10 +278,6 @@ Napi::Object InitFunction(Napi::Env env) {
       });
 
   obj["functionThrows"] = naah::Function::New<FunctionThrows>(env);
-  obj["functionThrowsManually"] =
-      naah::Function::New<FunctionThrowsManually>(env);
-  obj["functionThrowsWithResult"] =
-      naah::Function::New<FunctionThrowsWithResult>(env);
 
   return obj;
 }

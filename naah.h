@@ -81,9 +81,9 @@ using BigUint64Array = TypedArrayOf<uint64_t, napi_biguint64_array>;
 using BigInt64Array = TypedArrayOf<int64_t, napi_bigint64_array>;
 #endif
 
-class Error :
+class Error
 #ifdef NAPI_CPP_EXCEPTIONS
-    public std::exception
+    : public std::exception
 #endif  // NAPI_CPP_EXCEPTIONS
 {
  public:

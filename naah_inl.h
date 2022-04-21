@@ -885,6 +885,44 @@ inline const char *Error::what() const NAPI_NOEXCEPT {
 namespace details {
 class Invoker {
  private:
+  template <typename Ret, typename Callable>
+  static Ret CallInternal(const Napi::CallbackInfo &info, Callable &&fn) {}
+
+  template <typename Ret>
+  static Napi::Value ToJS(const Napi::CallbackInfo &info, Ret ret) {
+    if constexpr (details::is_result<Ret>::value) {
+      using T = typename result_type<Ret>::T;
+      using E = typename result_type<Ret>::E;
+      if (ret.value.has_value()) {
+        return ValueTransformer<T>::ToJS(info.Env(), std::move(*ret.value));
+      } else {
+        E::JSError::New(info.Env(), (*ret.error).Message())
+            .ThrowAsJavaScriptException();
+        return info.Env().Undefined();
+      }
+    } else {
+      return ValueTransformer<Ret>::ToJS(info.Env(), std::move(ret));
+    }
+  }
+
+  template <typename Callable>
+  static auto WrapCallback([[maybe_unused]] const Napi::CallbackInfo &info,
+                           Callable fn) {
+#ifdef NAPI_CPP_EXCEPTIONS
+    try {
+      return fn();
+    } catch (const RangeError &err) {
+      throw RangeError::JSError::New(info.Env(), err.Message());
+    } catch (const TypeError &err) {
+      throw TypeError::JSError::New(info.Env(), err.Message());
+    } catch (const Error &err) {
+      throw Error::JSError::New(info.Env(), err.Message());
+    }
+#else
+    return fn();
+#endif
+  }
+
   template <typename Callable>
   static auto CallInternal(const Napi::CallbackInfo &info, Callable &&fn) {
     using Signature = get_signature<std::decay_t<Callable>>;
@@ -913,48 +951,59 @@ class Invoker {
     }
   }
 
+  template <typename Callable>
+  static auto CallJSInternal(const Napi::CallbackInfo &info, Callable &&fn) {
+    using Signature = get_signature<std::decay_t<Callable>>;
+    using OriginArgs = typename Signature::args;
+    using Ret = typename Signature::ret;
+
+    constexpr bool ret_is_void = std::is_void_v<Ret>;
+
+    constexpr bool head_is_cb_info =
+        std::is_same_v<typename get_tuple_elements<OriginArgs>::head,
+                       const Napi::CallbackInfo &>;
+    using Args = typename std::conditional_t<
+        head_is_cb_info, typename get_tuple_elements<OriginArgs>::rest,
+        OriginArgs>;
+
+    std::optional<Args> args = ArgsConverter<Args>::Get(info, 0);
+    if (!args.has_value()) {
+      NAPI_THROW(Napi::TypeError::New(info.Env(), "bad arguments"),
+                 typename std::conditional_t<ret_is_void, void, Napi::Value>());
+    }
+
+    if constexpr (head_is_cb_info) {
+      if constexpr (ret_is_void) {
+        return std::apply(
+            std::forward<Callable>(fn),
+            std::tuple_cat(std::make_tuple(std::cref(info)), std::move(*args)));
+      } else {
+        return ToJS<Ret>(
+            info, std::apply(std::forward<Callable>(fn),
+                             std::tuple_cat(std::make_tuple(std::cref(info)),
+                                            std::move(*args))));
+      }
+    } else {
+      if constexpr (ret_is_void) {
+        return std::apply(std::forward<Callable>(fn), std::move(*args));
+      } else {
+        return ToJS<Ret>(
+            info, std::apply(std::forward<Callable>(fn), std::move(*args)));
+      }
+    }
+  }
+
  public:
   template <typename Callable>
   static auto Call(const Napi::CallbackInfo &info, Callable &&fn) {
-#ifdef NAPI_CPP_EXCEPTIONS
-    try {
-      return CallInternal(info, std::forward<Callable>(fn));
-    } catch (const RangeError &err) {
-      throw RangeError::JSError::New(info.Env(), err.Message());
-    } catch (const TypeError &err) {
-      throw TypeError::JSError::New(info.Env(), err.Message());
-    } catch (const Error &err) {
-      throw Error::JSError::New(info.Env(), err.Message());
-    }
-#else
-    return CallInternal(info, std::forward<Callable>(fn));
-#endif
+    return WrapCallback(
+        info, [&] { return CallInternal(info, std::forward<Callable>(fn)); });
   }
 
   template <typename Callable>
   static auto CallJS(const Napi::CallbackInfo &info, Callable &&fn) {
-    using Signature = get_signature<std::decay_t<Callable>>;
-    using Ret = typename Signature::ret;
-
-    if constexpr (std::is_void_v<Ret>) {
-      return Call(info, std::forward<Callable>(fn));
-    } else {
-      Ret result = Call(info, std::forward<Callable>(fn));
-      if constexpr (details::is_result<Ret>::value) {
-        using T = typename result_type<Ret>::T;
-        using E = typename result_type<Ret>::E;
-        if (result.value.has_value()) {
-          return ValueTransformer<T>::ToJS(info.Env(),
-                                           std::move(*result.value));
-        } else {
-          E::JSError::New(info.Env(), (*result.error).Message())
-              .ThrowAsJavaScriptException();
-          return info.Env().Undefined();
-        }
-      } else {
-        return ValueTransformer<Ret>::ToJS(info.Env(), std::move(result));
-      }
-    }
+    return WrapCallback(
+        info, [&] { return CallJSInternal(info, std::forward<Callable>(fn)); });
   }
 
   template <auto fn>
