@@ -3,7 +3,12 @@
 [![NPM](https://img.shields.io/npm/v/node-addon-api-helper)](https://www.npmjs.com/package/node-addon-api-helper)
 [![CI](https://github.com/ajihyf/node-addon-api-helper/workflows/ci/badge.svg)](https://github.com/ajihyf/node-addon-api-helper/actions/workflows/ci.yml)
 [![lint](https://github.com/ajihyf/node-addon-api-helper/workflows/lint/badge.svg)](https://github.com/ajihyf/node-addon-api-helper/actions/workflows/lint.yml)
+![C++17](https://img.shields.io/badge/C%2B%2B-17-blue.svg)
 [![LICENSE](https://img.shields.io/github/license/ajihyf/node-addon-api-helper)](https://github.com/ajihyf/node-addon-api-helper/blob/main/LICENSE)
+
+![Windows Support](https://img.shields.io/static/v1?label=Windows&logo=windows&logoColor=white&message=support&color=success)
+![Linux Support](https://img.shields.io/static/v1?label=Linux&logo=linux&logoColor=white&message=support&color=success)
+![Mac Support](https://img.shields.io/static/v1?label=macOS&logo=apple&logoColor=white&message=support&color=success)
 
 Based on [node-addon-api](https://github.com/nodejs/node-addon-api), **node-addon-api-helper(naah)** provides a more convenient, type-safe and boilerplate-less way to write Node.js C++ addons.
 
@@ -16,8 +21,7 @@ Features:
 - Thread safe function
 - Create async work and return promise
 - Can be used together with original node-addon-api, no need to rewrite all
-
-Under heavily development at the moment. Feedback is welcome!
+- Pure header, can be easily integrated
 
 ## QuickStart
 
