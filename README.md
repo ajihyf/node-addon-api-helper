@@ -69,6 +69,10 @@ NAAH_EXPORT
 - [Async Work](./doc/async_work.md)
 - [Error Handling](./doc/error_handling.md)
 
+## Examples
+
+See `naah` directories in the [fork of node-addon-examples](https://github.com/ajihyf/node-addon-examples) for examples.
+
 ## Thanks
 
 - Based on [node-addon-api](https://github.com/nodejs/node-addon-api).
