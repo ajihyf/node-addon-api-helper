@@ -209,6 +209,8 @@ class Registration : public Napi::Addon<Registration> {
 
  private:
   std::map<ClassMetaInfo *, Napi::FunctionReference> classes_;
+  void DefineClass(Napi::Env env, ClassMetaInfo *meta_info,
+                   Napi::Object exports);
 };
 
 }  // namespace naah

@@ -188,5 +188,5 @@ console.log(a.sub(1)); // 42
 
 However, the support of inheritance has some limitations:
 
-- Due to [node-addon-api#229](https://github.com/nodejs/node-addon-api/issues/229), **naah** internally copies parent class methods to child class instead of setting up the prototype chain. So calling `child instanceof Base` will return `false`.
+- Due to [node-addon-api#229](https://github.com/nodejs/node-addon-api/issues/229), **naah** internally copies parent class methods to child class and monkey patches the prototype chain. It should work in most cases but doesn't match 100% with pure ES class inheritance.
 - Only single inheritance in JavaScript(calls to `Inherit<Base>()`) is supported.

@@ -1306,28 +1306,6 @@ struct ClassRegistrationEntry {
     static std::vector<ClassMetaInfo *> entries;
     return entries;
   }
-
-  static Napi::Function DefineClass(Napi::Env env, ClassMetaInfo *meta_info) {
-    std::vector<ScriptWrappable::PropertyDescriptor> descriptors(
-        reinterpret_cast<ScriptWrappable::PropertyDescriptor *>(
-            meta_info->descriptors.data()),
-        reinterpret_cast<ScriptWrappable::PropertyDescriptor *>(
-            meta_info->descriptors.data()) +
-            meta_info->descriptors.size());
-    ClassMetaInfo *parent = meta_info->parent;
-    while (parent != nullptr) {
-      descriptors.insert(
-          descriptors.end(),
-          reinterpret_cast<ScriptWrappable::PropertyDescriptor *>(
-              parent->descriptors.data()),
-          reinterpret_cast<ScriptWrappable::PropertyDescriptor *>(
-              parent->descriptors.data()) +
-              parent->descriptors.size());
-      parent = parent->parent;
-    }
-    return ScriptWrappable::DefineClass(env, meta_info->name, descriptors,
-                                        reinterpret_cast<void *>(meta_info));
-  }
 };
 
 template <typename T>
@@ -1418,9 +1396,7 @@ inline Registration::Registration(Napi::Env env, Napi::Object exports) {
     exports.Set(it.name, it.init_cb(env, it.name));
   }
   for (auto &it : details::ClassRegistrationEntry::Entries()) {
-    Napi::Function fun = details::ClassRegistrationEntry::DefineClass(env, it);
-    classes_[it] = Napi::Persistent(fun);
-    exports.Set(it->name, fun);
+    DefineClass(env, it, exports);
   }
 }
 
@@ -1429,6 +1405,58 @@ inline Napi::Function Registration::FindClass() {
   ClassMetaInfo *key = &details::ClassRegistration<T>::Instance();
   auto it = classes_.find(key);
   return it == classes_.end() ? Napi::Function() : it->second.Value();
+}
+
+inline void Registration::DefineClass(Napi::Env env, ClassMetaInfo *meta_info,
+                                      Napi::Object exports) {
+  auto it = classes_.find(meta_info);
+  if (it != classes_.end()) {
+    return;
+  }
+
+  std::vector<details::ScriptWrappable::PropertyDescriptor> descriptors(
+      reinterpret_cast<details::ScriptWrappable::PropertyDescriptor *>(
+          meta_info->descriptors.data()),
+      reinterpret_cast<details::ScriptWrappable::PropertyDescriptor *>(
+          meta_info->descriptors.data()) +
+          meta_info->descriptors.size());
+
+  if (meta_info->parent) {
+    ClassMetaInfo *parent = meta_info->parent;
+    DefineClass(env, parent, exports);
+    while (parent != nullptr) {
+      descriptors.insert(
+          descriptors.end(),
+          reinterpret_cast<details::ScriptWrappable::PropertyDescriptor *>(
+              parent->descriptors.data()),
+          reinterpret_cast<details::ScriptWrappable::PropertyDescriptor *>(
+              parent->descriptors.data()) +
+              parent->descriptors.size());
+      parent = parent->parent;
+    }
+  }
+
+  Napi::Function clazz = details::ScriptWrappable::DefineClass(
+      env, meta_info->name, descriptors, reinterpret_cast<void *>(meta_info));
+
+  if (meta_info->parent) {
+    Napi::Function parent_clazz =
+        classes_.find(meta_info->parent)->second.Value();
+
+    Napi::Object global = env.Global();
+    Napi::Object Object = global.Get("Object").As<Napi::Object>();
+    Napi::Function setPrototypeOf =
+        Object.Get("setPrototypeOf").As<Napi::Function>();
+
+    Napi::Value clazz_proto = clazz.Get("prototype");
+    Napi::Value parent_proto = parent_clazz.Get("prototype");
+
+    setPrototypeOf.Call({clazz_proto, parent_proto});
+    setPrototypeOf.Call({clazz, parent_clazz});
+  }
+
+  classes_[meta_info] = Napi::Persistent(clazz);
+  exports[meta_info->name] = clazz;
 }
 
 template <typename T>

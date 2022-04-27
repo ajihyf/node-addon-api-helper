@@ -76,9 +76,11 @@ const cb = (binding) => {
       expect(a).to.be.instanceOf(binding.SubA)
       expect(b).to.be.instanceOf(binding.SubB)
 
-      // sadly napi doesn't support this currently
-      // expect(a).to.be.instanceOf(binding.Base)
-      // expect(b).to.be.instanceOf(binding.Base)
+      expect(a).to.be.instanceOf(binding.Base)
+      expect(a).to.be.instanceOf(binding.SubA)
+      expect(a).not.to.be.instanceOf(binding.SubB)
+      expect(b).to.be.instanceOf(binding.Base)
+      expect(b).not.to.be.instanceOf(binding.SubA)
 
       expect(a.num).to.eq(42)
       expect(b.num).to.eq(233)
