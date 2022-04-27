@@ -20,8 +20,8 @@ NAAH_REGISTRATION {
 }
 ```
 
-If no constructor is specified, calling new on this class will throw an JavaScript Error.
-But you can still create the object directly in C++(like factory pattern), see [Class as Argument](#class-as-argument) for details.
+If no constructor is specified, calling new on this class will throw a JavaScript Error.
+But you can still create the object directly in C++(like factory patterns), see [Class as Argument](#class-as-argument) for details.
 
 ## InstanceMethod
 
@@ -105,7 +105,7 @@ class A : public naah::Class {
 
 ## Class as Argument
 
-Exported class object can also be function arguments and return value. This feature is supported for NAPI_VERSION >= 8.
+Class instances can also be function arguments and return values.
 
 ```cpp
 class Foo : public naah::Class {
@@ -123,3 +123,70 @@ class Bar : public naah::Class {
 ```
 
 Note that the argument type is a non-null pointer. Since the instance is managed by JavaScript VM, you should never delete it or pass it to other threads.
+
+## Inheritance
+
+Use `Inherit<Base>()` to allow calling parent class methods (including instance and static methods) :
+
+```cpp
+class Base : public naah::Class {
+ public:
+  Base(uint32_t num) : _num(num) {}
+
+  virtual std::string GetReal() = 0;
+
+  uint32_t num() { return _num; }
+  void set_num(uint32_t num) { _num = num; }
+
+  uint32_t Add(uint32_t num) {
+    _num += num;
+    return _num;
+  }
+
+  uint32_t _num;
+
+  static std::string GetRealStatic(Base* base) { return base->GetReal(); }
+};
+
+class SubA : public Base {
+ public:
+  SubA(uint32_t num) : Base(num) {}
+
+  std::string GetReal() override { return "A"; }
+
+  uint32_t Sub(uint32_t num) {
+    _num -= num;
+    return _num;
+  }
+};
+
+NAAH_REGISTRATION {
+  using reg = naah::Registration;
+
+  reg::Class<Base>("Base")
+      .InstanceMethod<&Base::GetReal>("getReal")
+      .InstanceMethod<&Base::Add>("add")
+      .InstanceAccessor<&Base::num, &Base::set_num>("num")
+      .StaticMethod<Base::GetRealStatic>("getReal");
+  reg::Class<SubA>("SubA")
+      .Inherits<Base>()
+      .Constructor<uint32_t>()
+      .InstanceMethod<&SubA::Sub>("sub");
+}
+```
+
+In JavaScript :
+
+```js
+const a = new binding.SubA(42);
+console.log(a.num); // 42
+console.log(binding.Base.getReal(a)); // 'A'
+console.log(binding.SubA.getReal(a)); // 'A'
+console.log(a.add(1)); // 43
+console.log(a.sub(1)); // 42
+```
+
+However, the support of inheritance has some limitations:
+
+- Due to [node-addon-api#229](https://github.com/nodejs/node-addon-api/issues/229), **naah** internally copies parent class methods to child class instead of setting up the prototype chain. So calling `child instanceof Base` will return `false`.
+- Only single inheritance in JavaScript(calls to `Inherit<Base>()`) is supported.

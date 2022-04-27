@@ -69,6 +69,43 @@ const cb = (binding) => {
       expect(() => new binding.FactorOnlyObject()).to.throw()
       expect(binding.FactorOnlyObject.create()).to.be.instanceOf(binding.FactorOnlyObject)
     })
+
+    it('support class inheritance', () => {
+      const a = new binding.SubA(42)
+      const b = new binding.SubB(233)
+      expect(a).to.be.instanceOf(binding.SubA)
+      expect(b).to.be.instanceOf(binding.SubB)
+
+      // sadly napi doesn't support this currently
+      // expect(a).to.be.instanceOf(binding.Base)
+      // expect(b).to.be.instanceOf(binding.Base)
+
+      expect(a.num).to.eq(42)
+      expect(b.num).to.eq(233)
+      a.add(1)
+      b.add(1)
+      expect(a.num).to.eq(43)
+      expect(b.num).to.eq(234)
+
+      a.sub(1)
+      expect(a.num).to.eq(42)
+      b.mul(2)
+      expect(b.num).to.eq(468)
+
+      expect(a.getReal()).to.eq('A')
+      expect(b.getReal()).to.eq('B')
+      expect(binding.Base.getReal(a)).to.eq('A')
+      expect(binding.Base.getReal(b)).to.eq('B')
+      expect(binding.SubA.getReal(a)).to.eq('A')
+      expect(binding.SubB.getReal(b)).to.eq('B')
+      expect(binding.SubB.getReal(a)).to.eq('A')
+      expect(binding.SubA.getReal(b)).to.eq('B')
+      expect(() => binding.Base.getReal({})).to.throw(TypeError)
+      expect(binding.SubA.acceptA(a)).to.eq(42)
+      expect(() => binding.SubA.acceptA(b)).to.throw(TypeError)
+      expect(binding.SubB.acceptB(b)).to.eq(468)
+      expect(() => binding.SubB.acceptB(a)).to.throw(TypeError)
+    })
   })
 }
 

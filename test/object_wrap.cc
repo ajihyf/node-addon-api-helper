@@ -23,28 +23,6 @@ class TestObject : public naah::Class {
   static uint32_t count() { return _count; }
   static void set_count(uint32_t n) { _count = n; };
 
-  static Napi::Function DefineClass(Napi::Env env) {
-    using Wrapped = naah::ScriptWrappable<TestObject>;
-
-    Napi::Symbol sym = Napi::Symbol::New(env, "sym");
-    return Wrapped::DefineClass(
-        env, "TestObject", Wrapped::ConstructCallback<uint32_t>,
-        {Wrapped::StaticValue("sym", sym),
-         Wrapped::StaticMethod<TestObject::AddStatic>("add"),
-         Wrapped::StaticAccessor<TestObject::count>("readonlyCount"),
-         Wrapped::StaticAccessor<TestObject::count, TestObject::set_count>(
-             "count"),
-
-         Wrapped::InstanceValue("iv", Napi::Number::New(env, 3154)),
-         Wrapped::InstanceMethod<&TestObject::SymMethod>(sym),
-         Wrapped::InstanceMethod<&TestObject::Multiply>("multiply"),
-         Wrapped::InstanceMethod<&TestObject::Add>("add"),
-         Wrapped::InstanceMethod<&TestObject::GetArgLength>("getArgLength"),
-         Wrapped::InstanceAccessor<&TestObject::num>("readonlyNum"),
-         Wrapped::InstanceAccessor<&TestObject::num, &TestObject::set_num>(
-             "num")});
-  }
-
  private:
   static uint32_t _count;
   uint32_t _num;
@@ -59,25 +37,31 @@ class AnotherTestObject : public naah::Class {
   void AddTest(TestObject* obj, uint32_t num) { obj->Add(num); }
 
   uint32_t GetTestNum(const TestObject* obj) { return obj->num(); }
-
-  static Napi::Function DefineClass(Napi::Env env) {
-    using Wrapped = naah::ScriptWrappable<AnotherTestObject>;
-
-    return Wrapped::DefineClass(
-        env, "AnotherTestObject",
-        Wrapped::ConstructCallback<const Napi::CallbackInfo&>,
-        {Wrapped::InstanceMethod<&AnotherTestObject::AddTest>("addTest"),
-         Wrapped::InstanceMethod<&AnotherTestObject::GetTestNum>(
-             "getTestNum")});
-  }
 };
 }  // namespace
+
+NAAH_REGISTRATION {
+  naah::Registration::Class<TestObject>("TestObject")
+      .Constructor<uint32_t>()
+      .StaticMethod<TestObject::AddStatic>("add")
+      .StaticAccessor<TestObject::count>("readonlyCount")
+      .StaticAccessor<TestObject::count, TestObject::set_count>("count")
+      .InstanceMethod<&TestObject::Multiply>("multiply")
+      .InstanceMethod<&TestObject::Add>("add")
+      .InstanceMethod<&TestObject::GetArgLength>("getArgLength")
+      .InstanceAccessor<&TestObject::num>("readonlyNum")
+      .InstanceAccessor<&TestObject::num, &TestObject::set_num>("num");
+
+  naah::Registration::Class<AnotherTestObject>("AnotherTestObject")
+      .Constructor<const Napi::CallbackInfo&>()
+      .InstanceMethod<&AnotherTestObject::AddTest>("addTest")
+      .InstanceMethod<&AnotherTestObject::GetTestNum>("getTestNum");
+}
 
 Napi::Object InitScriptWrappable(Napi::Env env) {
   Napi::Object obj = Napi::Object::New(env);
 
-  obj["TestObject"] = TestObject::DefineClass(env);
-  obj["AnotherTestObject"] = AnotherTestObject::DefineClass(env);
+  naah::Registration::Init(env, obj);
 
   return obj;
 }

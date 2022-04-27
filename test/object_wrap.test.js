@@ -31,13 +31,6 @@ forEachBinding(({ scriptWrappable }) => {
       expect(obj.num).to.eq(84)
     })
 
-    it('calls symbol method', () => {
-      const sym = scriptWrappable.TestObject.sym
-      expect(sym).to.be.a('symbol')
-      const obj = new scriptWrappable.TestObject(233)
-      expect(obj[sym]('hello')).to.eq('hello??sym')
-    })
-
     it('calls static accessor', () => {
       scriptWrappable.TestObject.count = 0
       expect(scriptWrappable.TestObject.count).to.eq(0)

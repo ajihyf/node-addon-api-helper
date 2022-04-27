@@ -9,12 +9,6 @@
 #include <optional>
 #include <string>
 
-#if !defined(NAAH_TAG_OBJECT_WRAP) && !defined(NAAH_DISABLE_TAG_OBJECT_WRAP)
-#if NAPI_VERSION >= 8
-#define NAAH_TAG_OBJECT_WRAP
-#endif
-#endif
-
 namespace naah {
 
 template <typename T, typename Enabled = void>
@@ -112,133 +106,32 @@ class TypeError : public Error {
   using Error::Error;
 };
 
-class Function {
- public:
-  template <auto fn>
-  static Napi::Function New(Napi::Env env, const char *utf8name = nullptr,
-                            void *data = nullptr);
+struct ClassMetaInfo;
+namespace details {
+class ScriptWrappable;
+}
 
-  template <auto fn>
-  static Napi::Function New(Napi::Env env, const std::string &utf8name,
-                            void *data = nullptr);
-
-  template <typename Callable>
-  static Napi::Function New(Napi::Env env, Callable fn,
-                            const char *utf8name = nullptr,
-                            void *data = nullptr);
-
-  template <typename Callable>
-  static Napi::Function New(Napi::Env env, Callable fn,
-                            const std::string &utf8name, void *data = nullptr);
-};
-
-template <typename T>
-class ScriptWrappable : public Napi::ObjectWrap<ScriptWrappable<T>> {
+class Class {
  private:
-  using This = ScriptWrappable<T>;
+  ClassMetaInfo *_meta_info;
 
-  std::unique_ptr<T> _wrapped;
-
-  template <auto T::*fn>
-  auto InstanceMethodCallback(const Napi::CallbackInfo &);
-
-  template <auto T::*fn>
-  void InstanceSetterCallback(const Napi::CallbackInfo &, const Napi::Value &);
-
-  template <auto fn>
-  static auto StaticMethodCallback(const Napi::CallbackInfo &);
-
-  template <auto fn>
-  static void StaticSetterCallback(const Napi::CallbackInfo &,
-                                   const Napi::Value &);
+  friend class details::ScriptWrappable;
 
  public:
-  ScriptWrappable(const Napi::CallbackInfo &info);
+  using ConstructFn = std::unique_ptr<Class> (*)(const Napi::CallbackInfo &);
 
-  T &wrapped() const;
+  Class();
+  virtual ~Class();
 
-  using ConstructFn = std::unique_ptr<T> (*)(const Napi::CallbackInfo &);
-
-  using PropertyDescriptor =
-      typename Napi::ObjectWrap<This>::PropertyDescriptor;
-
-  template <typename... Args>
-  static std::unique_ptr<T> ConstructCallback(const Napi::CallbackInfo &);
-
-  static Napi::Function DefineClass(
-      Napi::Env env, const char *utf8name, ConstructFn ctor_fn,
-      const std::initializer_list<PropertyDescriptor> &properties);
-
-  static Napi::Function DefineClass(
-      Napi::Env env, const char *utf8name, ConstructFn ctor_fn,
-      const std::vector<PropertyDescriptor> &properties);
-
-  template <auto T::*fn>
-  static PropertyDescriptor InstanceMethod(
-      const char *name, napi_property_attributes attributes = napi_default,
-      void *data = nullptr);
-
-  template <auto T::*fn>
-  static PropertyDescriptor InstanceMethod(
-      Napi::Symbol name, napi_property_attributes attributes = napi_default,
-      void *data = nullptr);
-
-  template <auto T::*getter>
-  static PropertyDescriptor InstanceAccessor(
-      const char *utf8name, napi_property_attributes attributes = napi_default,
-      void *data = nullptr);
-
-  template <auto T::*getter, auto T::*setter>
-  static PropertyDescriptor InstanceAccessor(
-      const char *utf8name, napi_property_attributes attributes = napi_default,
-      void *data = nullptr);
-
-  template <auto T::*getter>
-  static PropertyDescriptor InstanceAccessor(
-      Napi::Symbol name, napi_property_attributes attributes = napi_default,
-      void *data = nullptr);
-
-  template <auto T::*getter, auto T::*setter>
-  static PropertyDescriptor InstanceAccessor(
-      Napi::Symbol name, napi_property_attributes attributes = napi_default,
-      void *data = nullptr);
-
-  template <auto fn>
-  static PropertyDescriptor StaticMethod(
-      const char *name, napi_property_attributes attributes = napi_default,
-      void *data = nullptr);
-
-  template <auto fn>
-  static PropertyDescriptor StaticMethod(
-      Napi::Symbol name, napi_property_attributes attributes = napi_default,
-      void *data = nullptr);
-
-  template <auto getter>
-  static PropertyDescriptor StaticAccessor(
-      const char *utf8name, napi_property_attributes attributes = napi_default,
-      void *data = nullptr);
-
-  template <auto getter, auto setter>
-  static PropertyDescriptor StaticAccessor(
-      const char *utf8name, napi_property_attributes attributes = napi_default,
-      void *data = nullptr);
-
-  template <auto getter>
-  static PropertyDescriptor StaticAccessor(
-      Napi::Symbol name, napi_property_attributes attributes = napi_default,
-      void *data = nullptr);
-
-  template <auto getter, auto setter>
-  static PropertyDescriptor StaticAccessor(
-      Napi::Symbol name, napi_property_attributes attributes = napi_default,
-      void *data = nullptr);
-
-#ifdef NAAH_TAG_OBJECT_WRAP
-  static const napi_type_tag *type_tag();
-#endif
+  const ClassMetaInfo *meta_info() const;
 };
 
-struct Class {};
+struct ClassMetaInfo {
+  const char *name;
+  ClassMetaInfo *parent;
+  Class::ConstructFn ctor;
+  std::vector<napi_property_descriptor> descriptors;
+};
 
 template <typename T>
 class ClassRegistration {
@@ -247,6 +140,9 @@ class ClassRegistration {
 
   template <typename... CtorArgs>
   ClassRegistration<T> &Constructor();
+
+  template <typename P>
+  ClassRegistration<T> &Inherits();
 
   template <auto T::*fn>
   ClassRegistration<T> &InstanceMethod(
@@ -312,7 +208,7 @@ class Registration : public Napi::Addon<Registration> {
   Napi::Function FindClass();
 
  private:
-  std::map<uint64_t, Napi::FunctionReference> classes_;
+  std::map<ClassMetaInfo *, Napi::FunctionReference> classes_;
 };
 
 }  // namespace naah

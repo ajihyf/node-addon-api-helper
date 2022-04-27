@@ -16,7 +16,7 @@ Features:
 
 - Automatically transform values between JavaScript and C++
 - Automatically register exports
-- Class binding
+- Class binding (with inheritance)
 - Custom object type
 - Thread safe function
 - Create async work and return promise

@@ -71,15 +71,17 @@ Napi::Object InitConvert(Napi::Env env) {
   obj["u16stringView"] =
       naah::ConvertToJS(env, std::u16string_view(u"u16stringView"));
 
-  obj["customMethod"] = naah::Function::New<CustomMethod>(env);
+  obj["customMethod"] = naah::details::Function::New<CustomMethod>(env);
 
-  obj["fnLambda"] = naah::Function::New<FnLambda>(env);
-  obj["fnFunction"] = naah::Function::New<FnFunction>(env);
+  obj["fnLambda"] = naah::details::Function::New<FnLambda>(env);
+  obj["fnFunction"] = naah::details::Function::New<FnFunction>(env);
 
-  obj["errorFunction"] = naah::Function::New<ErrorFunction>(env);
-  obj["rangeErrorFunction"] = naah::Function::New<RangeErrorFunction>(env);
-  obj["typeErrorFunction"] = naah::Function::New<TypeErrorFunction>(env);
-  obj["fnVoidFunction"] = naah::Function::New<FnVoidFunction>(env);
+  obj["errorFunction"] = naah::details::Function::New<ErrorFunction>(env);
+  obj["rangeErrorFunction"] =
+      naah::details::Function::New<RangeErrorFunction>(env);
+  obj["typeErrorFunction"] =
+      naah::details::Function::New<TypeErrorFunction>(env);
+  obj["fnVoidFunction"] = naah::details::Function::New<FnVoidFunction>(env);
 
   return obj;
 }

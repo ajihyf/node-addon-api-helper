@@ -70,16 +70,16 @@ naah::AsyncWork<void> AsyncTypedArray(
 Napi::Object InitMultithread(Napi::Env env) {
   Napi::Object obj = Napi::Object::New(env);
 
-  obj["asyncNotify"] = naah::Function::New<AsyncNotify>(env);
-  obj["asyncMinus3"] = naah::Function::New<AsyncMinus3>(env);
+  obj["asyncNotify"] = naah::details::Function::New<AsyncNotify>(env);
+  obj["asyncMinus3"] = naah::details::Function::New<AsyncMinus3>(env);
 
-  obj["asyncWorker"] = naah::Function::New<AsyncWorker>(env);
-  obj["promiseWorker"] = naah::Function::New<PromiseWorker>(env);
+  obj["asyncWorker"] = naah::details::Function::New<AsyncWorker>(env);
+  obj["promiseWorker"] = naah::details::Function::New<PromiseWorker>(env);
   obj["promiseWorkerWithReject"] =
-      naah::Function::New<PromiseWorkerWithReject>(env);
+      naah::details::Function::New<PromiseWorkerWithReject>(env);
 
-  obj["asyncArrayBuffer"] = naah::Function::New<AsyncArrayBuffer>(env);
-  obj["asyncTypedArray"] = naah::Function::New<AsyncTypedArray>(env);
+  obj["asyncArrayBuffer"] = naah::details::Function::New<AsyncArrayBuffer>(env);
+  obj["asyncTypedArray"] = naah::details::Function::New<AsyncTypedArray>(env);
 
   return obj;
 }
