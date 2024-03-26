@@ -585,7 +585,7 @@ struct ValueTransformer<std::vector<T>> {
       }
       result.push_back(std::move(*item));
     }
-    return std::move(result);
+    return result;
   }
 
   static Napi::Value ToJS(Napi::Env env, std::vector<T> arr) {
@@ -1639,7 +1639,7 @@ struct ValueTransformer<T, std::enable_if_t<std::is_base_of_v<Object, T>>> {
         return {};
       }
     }
-    return std::move(t);
+    return t;
   }
 
   static Napi::Value ToJS(Napi::Env env, T v) {
@@ -1669,6 +1669,44 @@ inline ObjectRegistration<T> Registration::Object() {
   using NAAH_REGISTRATION_ADDON = naah::Registration; \
   NODE_API_ADDON(NAAH_REGISTRATION_ADDON)
 
-#define NAAH_REGISTRATION NAPI_C_CTOR(napi_helper_auto_register_function_)
+#ifndef NAAH_CDECL
+#ifdef _WIN32
+#define NAAH_CDECL __cdecl
+#else
+#define NAAH_CDECL
+#endif
+#endif
+
+#if defined(_MSC_VER)
+#if defined(__cplusplus)
+#define NAAH_C_CTOR(fn)            \
+  static void NAAH_CDECL fn(void); \
+  namespace {                      \
+  struct fn##_ {                   \
+    fn##_() { fn(); }              \
+  } fn##_v_;                       \
+  }                                \
+  static void NAAH_CDECL fn(void)
+#else  // !defined(__cplusplus)
+#pragma section(".CRT$XCU", read)
+// The NAAH_C_CTOR macro defines a function fn that is called during CRT
+// initialization.
+// C does not support dynamic initialization of static variables and this code
+// simulates C++ behavior. Exporting the function pointer prevents it from being
+// optimized. See for details:
+// https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-initialization?view=msvc-170
+#define NAAH_C_CTOR(fn)                                                        \
+  static void NAAH_CDECL fn(void);                                             \
+  __declspec(dllexport, allocate(".CRT$XCU")) void(NAAH_CDECL * fn##_)(void) = \
+      fn;                                                                      \
+  static void NAAH_CDECL fn(void)
+#endif  // defined(__cplusplus)
+#else
+#define NAAH_C_CTOR(fn)                              \
+  static void fn(void) __attribute__((constructor)); \
+  static void fn(void)
+#endif
+
+#define NAAH_REGISTRATION NAAH_C_CTOR(napi_helper_auto_register_function_)
 
 #endif  // SRC_NAAH_INL_H_

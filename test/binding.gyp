@@ -20,6 +20,12 @@
             'sources': ['>@(binding_sources)']
         },
         {
+            'target_name': 'binding_namespace',
+            'includes': ['./common.gypi', './except.gypi'],
+            'sources': ['>@(binding_sources)'],
+            'defines': [ 'NAPI_CPP_CUSTOM_NAMESPACE=MyCustomNapi' ]
+        },
+        {
             'target_name': 'binding_noexcept',
             'includes': ['./common.gypi', './noexcept.gypi'],
             'sources': ['>@(binding_sources)']

@@ -11,6 +11,14 @@
 
 namespace naah {
 
+namespace {
+#ifdef NAPI_CPP_CUSTOM_NAMESPACE
+namespace Napi = ::Napi::NAPI_CPP_CUSTOM_NAMESPACE;
+#else
+namespace Napi = ::Napi;
+#endif
+}  // namespace
+
 template <typename T, typename Enabled = void>
 struct ValueTransformer {
   static std::optional<T> FromJS(Napi::Value);
